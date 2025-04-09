@@ -1,0 +1,6 @@
+npm init -y
+npm install express mongoose dotenv cors bcryptjs jsonwebtoken
+npm install nodemon --save-dev
+
+npm install bcryptjs jsonwebtoken
+npm install nodemailer otp-generator 
