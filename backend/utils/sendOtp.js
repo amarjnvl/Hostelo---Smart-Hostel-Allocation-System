@@ -1,6 +1,11 @@
 const nodemailer = require("nodemailer");
 
-const sendOtp = async (email, otp) => {
+const sendOtp = async (
+  email,
+  otp,
+  subject = "Your OTP for Hostel Portal Login",
+  message = `${otp}`
+) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -13,11 +18,11 @@ const sendOtp = async (email, otp) => {
     const mailOptions = {
       from: `"Hostel System" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your OTP for Hostel Portal Login",
-      text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
+      subject,
+      html: message,
     };
 
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
 
     console.log(info);
     return info;

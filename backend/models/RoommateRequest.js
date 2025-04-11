@@ -13,7 +13,10 @@ const roommateRequestSchema = new mongoose.Schema({
     enum: ["pending", "accepted", "rejected", "timeout"],
     default: "pending",
   },
-  groupId: { type: String }, // Same for all accepted friends
+  groupId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
   createdAt: { type: Date, default: Date.now },
   college: { type: mongoose.Schema.Types.ObjectId, ref: "College" },
 });

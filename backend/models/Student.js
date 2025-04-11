@@ -4,7 +4,7 @@ const studentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     rollNo: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true },
     gender: { type: String, enum: ["male", "female", "other"], required: true },
     college: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,10 +16,23 @@ const studentSchema = new mongoose.Schema(
     allocation: { type: mongoose.Schema.Types.ObjectId, ref: "Allocation" },
     otp: { type: String },
     otpExpires: { type: Date },
+    groupId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    groupHostelChoice: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Hostel",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 studentSchema.index({ rollNo: 1, college: 1 }, { unique: true });
+
+studentSchema.pre("save", function (next) {
+  if (!this.email) {
+    this.email = `${this.rollNo}@nonexistentdomain.com`;
+  }
+  next();
+});
 
 module.exports = mongoose.model("Student", studentSchema);
