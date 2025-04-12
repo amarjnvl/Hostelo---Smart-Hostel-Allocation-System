@@ -51,16 +51,18 @@ async function sendVerificationEmail(email, otp) {
   }
 }
 
-// Define a pre-save hook to send email after the document has been saved
+// Add error handling for email sending
 OTPSchema.pre("save", async function (next) {
   if (this.isNew) {
     try {
       await sendVerificationEmail(this.email, this.otp);
+      next();
     } catch (error) {
-      return next(error); // Pass the error to the next middleware
+      next(new Error("Failed to send OTP email: " + error.message));
     }
+  } else {
+    next();
   }
-  next();
 });
 
 const OTP = mongoose.model("OTP", OTPSchema);

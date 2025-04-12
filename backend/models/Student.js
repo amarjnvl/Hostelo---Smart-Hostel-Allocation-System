@@ -22,6 +22,11 @@ const studentSchema = new mongoose.Schema(
       ref: "Hostel",
       default: null,
     },
+    role: {
+      type: String,
+      enum: ["student", "admin"],
+      default: "student",
+    },
   },
   { timestamps: true }
 );

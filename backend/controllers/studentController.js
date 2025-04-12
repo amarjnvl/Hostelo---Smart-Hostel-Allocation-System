@@ -1,11 +1,45 @@
 const Student = require("../models/Student");
 
-const getMe = async (req, res) => {
-  const student = await Student.findById(req.user.id).populate("college");
-  res.status(200).json(student);
+
+
+// Get all students (for admin)
+exports.getAllStudents = async (req, res) => {
+  try {
+    const students = await Student.find().populate("college");
+    res.status(200).json(students);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
-module.exports = {
-  // other exports...
-  getMe,
+// Get a specific student by roll number (only for the student)
+exports.getStudentByRollNo = async (req, res) => {
+  try {
+    const student = await Student.findOne({
+      rollNo: req.params.rollNo,
+    }).populate("allocation");
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    res.status(200).json(student);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Update student details
+exports.updateStudent = async (req, res) => {
+  try {
+    const student = await Student.findByIdAndUpdate(
+      req.params.studentId,
+      req.body,
+      { new: true }
+    );
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    res.status(200).json(student);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };

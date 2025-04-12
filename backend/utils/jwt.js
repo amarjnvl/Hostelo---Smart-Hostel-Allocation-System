@@ -1,9 +1,10 @@
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-exports.signInToken = (payload) => {
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "24h",
+
+exports.signInToken = ({ id, role }) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    expiresIn: "3h",
   });
 };
 

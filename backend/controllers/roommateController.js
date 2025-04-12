@@ -4,6 +4,7 @@ const Allocation = require("../models/Allocation");
 const Room = require("../models/Room");
 const generateOtp = require("../utils/generateOtp");
 const sendOtp = require("../utils/sendOtp");
+const Hostel = require("../models/Hostel");
 
 exports.sendRoommateRequest = async (req, res) => {
   try {
@@ -74,7 +75,6 @@ exports.sendRoommateRequest = async (req, res) => {
           .json({ message: "First member must choose a hostel" });
       }
 
-      const Hostel = require("../models/Hostel");
       const chosenHostel = await Hostel.findById(hostelId);
       if (!chosenHostel) {
         return res.status(400).json({ message: "Selected hostel not found" });
@@ -90,7 +90,6 @@ exports.sendRoommateRequest = async (req, res) => {
       await fromStudent.save();
     }
 
-    // If already has group, then skip asking hostel
     const otp = generateOtp();
     await RoommateRequest.create({
       from: fromStudent._id,
@@ -180,7 +179,7 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "Invalid OTP or request expired" });
     }
 
-    // Room full check (if group already has someone allocated)
+    
     const groupMembers = await Student.find({ groupId: request.groupId });
     const allocated = groupMembers.find((stu) => stu.isAllocated);
 
@@ -203,12 +202,10 @@ exports.verifyRoommateOtp = async (req, res) => {
       }
     }
 
-    // ✅ Inherit group hostel choice from existing member
     if (fromStudent.groupHostelChoice) {
       toStudent.groupHostelChoice = fromStudent.groupHostelChoice;
     }
 
-    // ✅ Accept the request
     request.status = "accepted";
     toStudent.groupId = request.groupId;
 
@@ -221,6 +218,7 @@ exports.verifyRoommateOtp = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.deleteRoommateRequest = async (req, res) => {
   try {

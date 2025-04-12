@@ -37,6 +37,7 @@ exports.sendOtp = async (req, res) => {
 };
 
 // Verify OTP & login
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { rollNo, otp } = req.body;
@@ -44,7 +45,7 @@ exports.verifyOtp = async (req, res) => {
     if (!student) return res.status(404).json({ message: "Student not found" });
 
     const validOtp = await OTP.findOne({ email: student.email, otp });
-    const isOtpExpired = student.otpExpires && student.otpExpires < new Date();
+    const isOtpExpired = validOtp.expiresAt && validOtp.expiresAt < new Date();
 
     if (!validOtp || isOtpExpired) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -55,13 +56,21 @@ exports.verifyOtp = async (req, res) => {
     await student.save();
     await OTP.deleteOne({ _id: validOtp._id });
 
-    const token = jwt.sign(
-      { id: student._id, rollNo: student.rollNo },
-      process.env.JWT_SECRET,
-      { expiresIn: "3h" }
-    );
+    const token = signInToken({ id: student._id, role: student.role });
 
-    res.status(200).json({ message: "Login successful", token, student });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      student: {
+        id: student._id,
+        name: student.name,
+        rollNo: student.rollNo,
+        email: student.email,
+        gender: student.gender,
+        role: student.role,
+        college: student.college,
+      },
+    });
   } catch (error) {
     console.error("Verify OTP error:", error);
     res.status(500).json({ message: "Internal error" });
@@ -90,6 +99,7 @@ exports.registerStudent = async (req, res) => {
       gender,
       college: collegeId._id,
     });
+
     // Ensure the pre-save hook has populated the email field
     if (!student.email) {
       return res.status(400).json({ message: "Failed to generate email" });
@@ -97,12 +107,20 @@ exports.registerStudent = async (req, res) => {
       console.log("Generated email:", student.email);
     }
 
-    const token = signInToken({ id: student._id });
+    const token = signInToken({ id: student._id, role: student.role });
 
     res.status(201).json({
       message: "Student registered successfully",
       token,
-      student,
+      student: {
+        id: student._id,
+        name: student.name,
+        rollNo: student.rollNo,
+        gender: student.gender,
+        email: student.email,
+        role: student.role,
+        college: student.college,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Registration failed", error });
@@ -125,11 +143,20 @@ exports.loginStudent = async (req, res) => {
         .json({ message: "Invalid roll number or college" });
     }
 
-    const token = signInToken({ id: student._id });
+    const token = signInToken({ id: student._id, role: student.role });
+
     res.status(200).json({
       message: "Login successful",
       token,
-      student,
+      student: {
+        id: student._id,
+        name: student.name,
+        rollNo: student.rollNo,
+        gender: student.gender,
+        email: student.email,
+        role: student.role,
+        college: student.college,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Login failed", error });

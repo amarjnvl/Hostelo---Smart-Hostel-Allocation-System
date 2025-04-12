@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 const Student = require("../models/Student");
 
-
 const protect = async (req, res, next) => {
   let token;
 
@@ -22,6 +21,7 @@ const protect = async (req, res, next) => {
         rollNo: student.rollNo,
         college: student.college._id,
         gender: student.gender,
+        role: student.role,
       };
 
       next();
@@ -35,4 +35,12 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const adminProtect = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ message: "Not authorized as an admin" });
+  }
+};
+
+module.exports = { protect, adminProtect };
