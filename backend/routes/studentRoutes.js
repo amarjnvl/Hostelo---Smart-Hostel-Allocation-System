@@ -1,15 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const { getAllStudents, getStudentByRollNo, updateStudent } = require("../controllers/studentController");
 const { protect, adminProtect } = require("../middleware/authMiddleware");
+const {
+  getAllStudents,
+  getStudentByRollNo,
+  updateStudent,
+} = require("../controllers/studentController");
 
-// Route to get all students (admin only)
-router.get("/students", adminProtect, getAllStudents);
+// Protected routes
+router.use(protect);
 
-// Route to get student by roll number (student-specific)
-router.get("/student/:rollNo", protect, getStudentByRollNo);
+// Admin routes
+router.get("/", adminProtect, getAllStudents);
 
-// Route to update student details
-router.put("/student/:studentId", protect, updateStudent);
+// Student routes
+router.get("/profile/:rollNo", protect, getStudentByRollNo);
+router.put("/:studentId", protect, updateStudent);
 
 module.exports = router;

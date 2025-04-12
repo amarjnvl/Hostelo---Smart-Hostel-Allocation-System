@@ -8,26 +8,26 @@ const Hostel = require("../models/Hostel");
 
 exports.sendRoommateRequest = async (req, res) => {
   try {
-    const { toRoll, hostelId } = req.body; // hostelId is optional
+    const { toRoll, hostelId } = req.body;
     const fromRoll = req.user.rollNo;
     const college = req.user.college;
 
+    // Validate students
     const fromStudent = await Student.findOne({
       rollNo: fromRoll,
       college,
     }).populate("groupHostelChoice");
-    const toStudent = await Student.findOne({ rollNo: toRoll, college });
+
+    const toStudent = await Student.findOne({
+      rollNo: toRoll,
+      college,
+    });
 
     if (!fromStudent || !toStudent) {
-      return res
-        .status(404)
-        .json({ message: "One or both students not found in your college" });
-    }
-
-    if (fromStudent.isAllocated || toStudent.isAllocated) {
-      return res
-        .status(400)
-        .json({ message: "One of the students is already allocated a room" });
+      return res.status(404).json({
+        success: false,
+        message: "One or both students not found in your college",
+      });
     }
 
     if (fromStudent._id.equals(toStudent._id)) {
@@ -38,6 +38,13 @@ exports.sendRoommateRequest = async (req, res) => {
 
     if (fromStudent.gender !== toStudent.gender) {
       return res.status(400).json({ message: "Roommate must be same gender" });
+    }
+
+    if (fromStudent.isAllocated || toStudent.isAllocated) {
+      return res.status(400).json({
+        success: false,
+        message: "One of the students is already allocated a room",
+      });
     }
 
     if (fromStudent.groupId && fromStudent.groupId === toStudent.groupId) {
@@ -65,19 +72,26 @@ exports.sendRoommateRequest = async (req, res) => {
     }
 
     let groupId = fromStudent.groupId;
+    let chosenHostel = fromStudent.groupHostelChoice;
+
+    // First member case: create groupId and set hostel
     if (!groupId) {
       groupId = `group_${fromStudent._id}_${Date.now()}`;
       fromStudent.groupId = groupId;
 
       if (!hostelId) {
-        return res
-          .status(400)
-          .json({ message: "First member must choose a hostel" });
+        return res.status(400).json({
+          success: false,
+          message: "First member must choose a hostel",
+        });
       }
 
-      const chosenHostel = await Hostel.findById(hostelId);
+      chosenHostel = await Hostel.findById(hostelId);
       if (!chosenHostel) {
-        return res.status(400).json({ message: "Selected hostel not found" });
+        return res.status(400).json({
+          success: false,
+          message: "Selected hostel not found",
+        });
       }
 
       if (chosenHostel.gender !== fromStudent.gender) {
@@ -88,16 +102,33 @@ exports.sendRoommateRequest = async (req, res) => {
 
       fromStudent.groupHostelChoice = chosenHostel._id;
       await fromStudent.save();
+    } else {
+      chosenHostel = await Hostel.findById(fromStudent.groupHostelChoice);
     }
 
+    // Check group size doesn't exceed max room capacity
+    const groupMembers = await Student.find({
+      groupId: groupId,
+      college,
+    });
+
+    if (groupMembers.length + 1 > chosenHostel.roomCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot add more members. Max allowed is ${chosenHostel.roomCapacity} per room in this hostel.`,
+      });
+    }
+
+    // All validations passed, proceed with OTP generation and request
     const otp = generateOtp();
+
     await RoommateRequest.create({
       from: fromStudent._id,
       to: toStudent._id,
       otp,
       college: fromStudent.college,
       status: "pending",
-      groupId,
+      groupId: groupId,
       createdAt: new Date(),
     });
 
@@ -110,10 +141,17 @@ exports.sendRoommateRequest = async (req, res) => {
       "Roommate Request OTP"
     );
 
-    res.status(200).json({ message: "Roommate request sent successfully" });
+    res.status(200).json({
+      success: true,
+      message: `Roommate request sent successfully: ${otp}`,
+    });
   } catch (err) {
     console.error("SendRoommateRequest Error:", err);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to send roommate request",
+      error: err.message,
+    });
   }
 };
 
@@ -179,7 +217,6 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "Invalid OTP or request expired" });
     }
 
-    
     const groupMembers = await Student.find({ groupId: request.groupId });
     const allocated = groupMembers.find((stu) => stu.isAllocated);
 
@@ -218,7 +255,6 @@ exports.verifyRoommateOtp = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 exports.deleteRoommateRequest = async (req, res) => {
   try {

@@ -1,7 +1,5 @@
 const Student = require("../models/Student");
 
-
-
 // Get all students (for admin)
 exports.getAllStudents = async (req, res) => {
   try {
@@ -15,6 +13,10 @@ exports.getAllStudents = async (req, res) => {
 // Get a specific student by roll number (only for the student)
 exports.getStudentByRollNo = async (req, res) => {
   try {
+    if (req.user.rollNo !== req.params.rollNo) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     const student = await Student.findOne({
       rollNo: req.params.rollNo,
     }).populate("allocation");
@@ -32,8 +34,8 @@ exports.updateStudent = async (req, res) => {
   try {
     const student = await Student.findByIdAndUpdate(
       req.params.studentId,
-      req.body,
-      { new: true }
+      { $set: req.body },
+      { new: true, runValidators: true }
     );
     if (!student) {
       return res.status(404).json({ message: "Student not found" });

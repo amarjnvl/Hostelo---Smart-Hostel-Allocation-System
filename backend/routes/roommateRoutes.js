@@ -1,10 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const { sendRoommateRequest, verifyRoommateOtp } = require("../controllers/roommateController");
 const { protect } = require("../middleware/authMiddleware");
+const {
+  sendRoommateRequest,
+  verifyRoommateOtp,
+  deleteRoommateRequest,
+} = require("../controllers/roommateController");
 
-router.post("/send-request", protect, sendRoommateRequest);
-router.post("/verify-request", protect, verifyRoommateOtp);
+router.use(protect);
+router.post("/request", sendRoommateRequest);
+router.post("/verify", verifyRoommateOtp);
+
+router.delete("delete/:id", deleteRoommateRequest);
 
 module.exports = router;
-

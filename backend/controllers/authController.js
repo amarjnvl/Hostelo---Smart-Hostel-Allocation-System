@@ -79,7 +79,7 @@ exports.verifyOtp = async (req, res) => {
 
 exports.registerStudent = async (req, res) => {
   try {
-    const { name, rollNo, gender, college } = req.body;
+    const { name, rollNo, gender, role, college } = req.body;
 
     const existing = await Student.findOne({ rollNo });
     if (existing) {
@@ -97,6 +97,7 @@ exports.registerStudent = async (req, res) => {
       name,
       rollNo,
       gender,
+      role,
       college: collegeId._id,
     });
 

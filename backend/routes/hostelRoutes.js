@@ -1,13 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const hostelController = require("../controllers/hostelController");
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+  getHostelsByCollege,
+  getHostelById,
+  createHostel,
+  updateHostel,
+} = require("../controllers/hostelController");
+const { protect, adminProtect } = require("../middleware/authMiddleware");
 
+// Protected for all logged-in students
+router.get("/college/:collegeId", protect, getHostelsByCollege);
+router.get("/:hostelId", protect, getHostelById);
 
-router.get("/:collegeId", authMiddleware.protect, hostelController.getHostelsByCollege);
-router.get("/:collegeId/:hostelId", authMiddleware.protect, hostelController.getHostelById);
-router.post("/", authMiddleware.adminProtect, hostelController.createHostel);
-router.put("/:hostelId", authMiddleware.adminProtect, hostelController.updateHostel);
+// Admin-only routes (IMPORTANT: Protect -> AdminProtect)
+router.post("/", protect, adminProtect, createHostel);
+router.put("/:hostelId", protect, adminProtect, updateHostel);
 
 module.exports = router;
-

@@ -16,7 +16,10 @@ const studentSchema = new mongoose.Schema(
     allocation: { type: mongoose.Schema.Types.ObjectId, ref: "Allocation" },
     otp: { type: String },
     otpExpires: { type: Date },
-    groupId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    groupId: {
+      type: String,
+      default: null,
+    },
     groupHostelChoice: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hostel",

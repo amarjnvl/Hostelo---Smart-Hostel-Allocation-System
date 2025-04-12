@@ -13,38 +13,37 @@ const allocateRoomForStudent = async (student) => {
       }).sort({ roomCapacity: -1 });
     }
 
-    // Try to find a partially filled room (not full, same hostel, same gender)
-    let room = await Room.findOne({
+    const rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
     }).populate("occupants");
 
-    
-    if (!room) {
+    // First pass: exact fit (1 vacancy)
+    let selectedRoom = rooms.find((r) => r.capacity - r.occupants.length === 1);
+
+    // Second pass: any available room with space
+    if (!selectedRoom) {
+      selectedRoom = rooms.find((r) => r.capacity - r.occupants.length >= 1);
+    }
+
+    if (!selectedRoom) {
       throw new Error("No available room found.");
     }
 
-    // Assign student to room
-    if (!room.occupants.includes(student._id)) {
-      room.occupants.push(student._id);
+    selectedRoom.occupants.push(student._id);
+    if (selectedRoom.occupants.length === selectedRoom.capacity) {
+      selectedRoom.isFull = true;
     }
+    await selectedRoom.save();
 
-    if (room.occupants.length === room.capacity) {
-      room.isFull = true;
-    }
-
-    await room.save();
-
-    // Create allocation entry
     const allocation = new Allocation({
-      room: room._id,
+      room: selectedRoom._id,
       students: [student._id],
       allocatedAt: new Date(),
       college: student.college,
     });
     await allocation.save();
 
-    // Update student status
     student.isAllocated = true;
     student.allocation = allocation._id;
     await student.save();
@@ -65,50 +64,59 @@ const allocateRoomForGroup = async (students) => {
       preferredHostel = await Hostel.findOne({
         college: leader.college,
         gender: leader.gender,
-      }).sort({
-        roomCapacity: -1,
-      });
+      }).sort({ roomCapacity: -1 });
     }
 
-    // Find room with enough capacity for entire group
-    const room = await Room.findOne({
+    const rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
-      capacity: { $gte: students.length },
     }).populate("occupants");
 
-    if (!room) {
+    const groupSize = students.length;
+
+    // First pass: exact fit
+    let selectedRoom = rooms.find(
+      (r) => r.capacity - r.occupants.length === groupSize
+    );
+
+    // Second pass: allow >= groupSize
+    if (!selectedRoom) {
+      selectedRoom = rooms.find(
+        (r) => r.capacity - r.occupants.length >= groupSize
+      );
+    }
+
+    if (!selectedRoom) {
       throw new Error("No available room found for group.");
     }
 
-    // Assign all students to the room
-    room.occupants.push(...students.map((s) => s._id));
-    if (room.occupants.length === room.capacity) {
-      room.isFull = true;
+    selectedRoom.occupants.push(...students.map((s) => s._id));
+    if (selectedRoom.occupants.length === selectedRoom.capacity) {
+      selectedRoom.isFull = true;
     }
-    await room.save();
+    await selectedRoom.save();
 
-    // Create allocation
     const allocation = new Allocation({
-      room: room._id,
+      room: selectedRoom._id,
       students: students.map((s) => s._id),
       allocatedAt: new Date(),
       college: leader.college,
     });
     await allocation.save();
 
-    // Mark all students allocated
     for (let student of students) {
       student.isAllocated = true;
       student.allocation = allocation._id;
       await student.save();
     }
+
     return allocation;
   } catch (err) {
     console.error("Room group allocation error:", err.message);
     throw err;
   }
 };
+
 module.exports = {
   allocateRoomForStudent,
   allocateRoomForGroup,
