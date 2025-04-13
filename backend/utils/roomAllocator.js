@@ -3,23 +3,60 @@ const Allocation = require("../models/Allocation");
 const Hostel = require("../models/Hostel");
 
 const allocateRoomForStudent = async (student) => {
-  console.log(
-    `[allocateRoom] Starting allocation for student: ${student.rollNo}`
-  );
   try {
-    let preferredHostel = student.preferredHostel;
+    console.log(
+      `[allocateRoom] Starting allocation for student: ${student.rollNo}`
+    );
+
+    // Check if student is verified
+    if (!student.isRegistered) {
+      throw new Error("Student must be registered before allocation");
+    }
+
+    let preferredHostel = await Hostel.findById(student.preferredHostel);
     console.log(
       `[allocateRoom] Initial preferred hostel: ${preferredHostel?._id}`
     );
 
     if (!preferredHostel) {
-      console.log("[allocateRoom] No preferred hostel, finding default...");
-      preferredHostel = await Hostel.findOne({
-        college: student.college,
-        gender: student.gender,
-      }).sort({ roomCapacity: 1 });
       console.log(
-        `[allocateRoom] Selected default hostel: ${preferredHostel?._id}`
+        "[allocateRoom] No preferred hostel, finding hostels by vacancy..."
+      );
+      // Find hostels ordered by available capacity
+      const hostels = await Hostel.aggregate([
+        {
+          $match: {
+            college: student.college,
+            gender: student.gender,
+          },
+        },
+        {
+          $lookup: {
+            from: "rooms",
+            localField: "_id",
+            foreignField: "hostel",
+            as: "rooms",
+          },
+        },
+        {
+          $addFields: {
+            availableRooms: {
+              $size: {
+                $filter: {
+                  input: "$rooms",
+                  as: "room",
+                  cond: { $eq: ["$$room.isFull", false] },
+                },
+              },
+            },
+          },
+        },
+        { $sort: { availableRooms: 1 } },
+      ]);
+
+      preferredHostel = hostels[0];
+      console.log(
+        `[allocateRoom] Selected hostel by vacancy: ${preferredHostel?._id}`
       );
     }
 
@@ -27,7 +64,7 @@ const allocateRoomForStudent = async (student) => {
     let rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
-    }).populate("occupants");
+    }).populate("occupants").populate("hostel");
     console.log(
       `[allocateRoom] Found ${rooms.length} available rooms in preferred hostel`
     );
@@ -53,7 +90,7 @@ const allocateRoomForStudent = async (student) => {
         rooms = await Room.find({
           hostel: preferredHostel._id,
           isFull: false,
-        }).populate("occupants");
+        }).populate("occupants").populate("hostel");
         console.log(
           `[allocateRoom] Found ${rooms.length} rooms in alternative hostel`
         );
@@ -109,47 +146,61 @@ const allocateRoomForStudent = async (student) => {
       `[allocateRoom] Successfully allocated room for student ${student.rollNo}`
     );
 
-    return allocation;
+    // After creating and saving the allocation:
+
+    const populatedAllocation = await Allocation.findById(allocation._id)
+      .populate({
+        path: 'room',
+        populate: {
+          path: 'hostel'
+        }
+      });
+
+    return populatedAllocation;
   } catch (err) {
     console.error("[allocateRoom] Error:", err.message);
-    console.error("[allocateRoom] Stack:", err.stack);
     throw err;
   }
 };
 
 const allocateRoomForGroup = async (students) => {
-  console.log(
-    `[allocateGroup] Starting allocation for group of ${students.length} students`
-  );
   try {
-    const unallocatedStudents = students.filter((s) => !s.isAllocated);
     console.log(
-      `[allocateGroup] Unallocated students: ${unallocatedStudents.length}/${students.length}`
+      `[allocateGroup] Starting allocation for group of ${students.length} students`
     );
 
-    if (unallocatedStudents.length !== students.length) {
-      console.log(
-        "[allocateGroup] Some students already allocated, skipping group"
+    // Verify all students are registered
+    const unregisteredStudents = students.filter((s) => !s.isRegistered);
+    if (unregisteredStudents.length > 0) {
+      throw new Error(
+        `Some students are not registered: ${unregisteredStudents
+          .map((s) => s.rollNo)
+          .join(", ")}`
       );
-      return null;
     }
 
-    const leader = unallocatedStudents[0];
-    console.log(`[allocateGroup] Group leader: ${leader.rollNo}`);
-    let preferredHostel = leader.preferredHostel;
-    console.log(
-      `[allocateGroup] Initial preferred hostel: ${preferredHostel?._id}`
-    );
+    const groupSize = students.length;
+    const leader = students[0];
+    let preferredHostel = await Hostel.findById(leader.preferredHostel);
 
     if (!preferredHostel) {
-      console.log("[allocateGroup] Finding default hostel...");
+      console.log(
+        "[allocateGroup] No preferred hostel, finding suitable hostel..."
+      );
       preferredHostel = await Hostel.findOne({
         college: leader.college,
         gender: leader.gender,
         roomCapacity: { $gte: groupSize },
       }).sort({ roomCapacity: 1 });
+    }
+
+    if (!preferredHostel) {
+      console.log("[allocateGroup] No suitable hostel found for group size");
       console.log(
-        `[allocateGroup] Selected default hostel: ${preferredHostel?._id}`
+        "[allocateGroup] Suggesting individual allocation or form a group of less size"
+      );
+      throw new Error(
+        `No hostel found with rooms that can accommodate group of ${groupSize}. Consider individual allocation.`
       );
     }
 
@@ -157,10 +208,9 @@ const allocateRoomForGroup = async (students) => {
     let rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
-    }).populate("occupants");
+    }).populate("occupants").populate("hostel");
     console.log(`[allocateGroup] Found ${rooms.length} available rooms`);
 
-    const groupSize = unallocatedStudents.length;
     console.log(
       `[allocateGroup] Looking for room to fit ${groupSize} students`
     );
@@ -198,7 +248,7 @@ const allocateRoomForGroup = async (students) => {
         rooms = await Room.find({
           hostel: hostel._id,
           isFull: false,
-        }).populate("occupants");
+        }).populate("occupants").populate("hostel");
 
         selectedRoom =
           rooms.find((r) => r.capacity - r.occupants.length === groupSize) ||
@@ -219,7 +269,7 @@ const allocateRoomForGroup = async (students) => {
     }
 
     console.log("[allocateGroup] Updating room occupancy...");
-    selectedRoom.occupants.push(...unallocatedStudents.map((s) => s._id));
+    selectedRoom.occupants.push(...students.map((s) => s._id));
     if (selectedRoom.occupants.length === selectedRoom.capacity) {
       selectedRoom.isFull = true;
       console.log(`[allocateGroup] Room ${selectedRoom._id} is now full`);
@@ -229,7 +279,7 @@ const allocateRoomForGroup = async (students) => {
     console.log("[allocateGroup] Creating allocation record...");
     const allocation = new Allocation({
       room: selectedRoom._id,
-      students: unallocatedStudents.map((s) => s._id),
+      students: students.map((s) => s._id),
       allocatedAt: new Date(),
       college: leader.college,
     });
@@ -237,7 +287,7 @@ const allocateRoomForGroup = async (students) => {
     console.log(`[allocateGroup] Created allocation: ${allocation._id}`);
 
     console.log("[allocateGroup] Updating student records...");
-    for (let student of unallocatedStudents) {
+    for (let student of students) {
       student.isAllocated = true;
       student.allocation = allocation._id;
       await student.save();
@@ -247,7 +297,18 @@ const allocateRoomForGroup = async (students) => {
     console.log(
       `[allocateGroup] Successfully allocated room for group of ${groupSize} students`
     );
-    return allocation;
+
+    // After creating and saving the allocation:
+
+    const populatedAllocation = await Allocation.findById(allocation._id)
+      .populate({
+        path: 'room',
+        populate: {
+          path: 'hostel'
+        }
+      });
+
+    return populatedAllocation;
   } catch (err) {
     console.error("[allocateGroup] Error:", err.message);
     console.error("[allocateGroup] Stack:", err.stack);

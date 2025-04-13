@@ -75,12 +75,14 @@ const seed = async () => {
         name: `Student ${i + 1}`,
         rollNo: roll,
         email: `${roll}@${fakeDomain}`,
-        // gender: i % 2 === 0 ? "male" : "female",
-        gender: "male",
+        gender: i % 2 === 0 ? "male" : "female",
         college: college._id,
         preferredHostel: null,
         isAllocated: false,
         allocation: null,
+        // New fields added
+        isRegistered: false,
+        role: "student",
       });
     }
 

@@ -5,6 +5,7 @@ const {
   getAllStudents,
   getStudentByRollNo,
   updateStudent,
+  registerForHostel,
 } = require("../controllers/studentController");
 
 // Protected routes
@@ -16,5 +17,8 @@ router.get("/", adminProtect, getAllStudents);
 // Student routes
 router.get("/profile/:rollNo", protect, getStudentByRollNo);
 router.put("/:studentId", protect, updateStudent);
+
+// Add this new route
+router.post("/register", protect, registerForHostel);
 
 module.exports = router;
