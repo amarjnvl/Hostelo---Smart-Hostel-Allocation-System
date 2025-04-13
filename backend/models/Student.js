@@ -14,6 +14,7 @@ const studentSchema = new mongoose.Schema(
     preferredHostel: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel" },
     isAllocated: { type: Boolean, default: false },
     allocation: { type: mongoose.Schema.Types.ObjectId, ref: "Allocation" },
+    isRegistered: { type: Boolean, default: false },
     otp: { type: String },
     otpExpires: { type: Date },
     groupId: {

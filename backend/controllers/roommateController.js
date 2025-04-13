@@ -12,7 +12,9 @@ exports.sendRoommateRequest = async (req, res) => {
     const { toRoll, hostelId } = req.body;
     const fromRoll = req.user.rollNo;
     const college = req.user.college;
-    console.log(`[sendRoommateRequest] From: ${fromRoll}, To: ${toRoll}, Hostel: ${hostelId}`);
+    console.log(
+      `[sendRoommateRequest] From: ${fromRoll}, To: ${toRoll}, Hostel: ${hostelId}`
+    );
 
     // Validate students
     console.log("[sendRoommateRequest] Validating students...");
@@ -32,12 +34,16 @@ exports.sendRoommateRequest = async (req, res) => {
         message: "One or both students not found in your college",
       });
     }
-    console.log(`[sendRoommateRequest] Found students - From: ${fromStudent.name}, To: ${toStudent.name}`);
+    console.log(
+      `[sendRoommateRequest] Found students - From: ${fromStudent.name}, To: ${toStudent.name}`
+    );
 
     // Validation checks
     if (fromStudent._id.equals(toStudent._id)) {
       console.log("[sendRoommateRequest] Self-request attempt detected");
-      return res.status(400).json({ message: "Cannot send request to yourself" });
+      return res
+        .status(400)
+        .json({ message: "Cannot send request to yourself" });
     }
 
     if (fromStudent.gender !== toStudent.gender) {
@@ -78,7 +84,9 @@ exports.sendRoommateRequest = async (req, res) => {
 
     let groupId = fromStudent.groupId;
     let chosenHostel = fromStudent.groupHostelChoice;
-    console.log(`[sendRoommateRequest] Current groupId: ${groupId}, hostelChoice: ${chosenHostel?._id}`);
+    console.log(
+      `[sendRoommateRequest] Current groupId: ${groupId}, hostelChoice: ${chosenHostel?._id}`
+    );
 
     // First member case
     if (!groupId) {
@@ -87,7 +95,9 @@ exports.sendRoommateRequest = async (req, res) => {
       fromStudent.groupId = groupId;
 
       if (!hostelId) {
-        console.log("[sendRoommateRequest] Missing hostel choice for first member");
+        console.log(
+          "[sendRoommateRequest] Missing hostel choice for first member"
+        );
         return res.status(400).json({
           success: false,
           message: "First member must choose a hostel",
@@ -95,7 +105,9 @@ exports.sendRoommateRequest = async (req, res) => {
       }
 
       chosenHostel = await Hostel.findById(hostelId);
-      console.log(`[sendRoommateRequest] Selected hostel: ${chosenHostel?.name}`);
+      console.log(
+        `[sendRoommateRequest] Selected hostel: ${chosenHostel?.name}`
+      );
 
       if (!chosenHostel) {
         console.log("[sendRoommateRequest] Selected hostel not found");
@@ -113,10 +125,14 @@ exports.sendRoommateRequest = async (req, res) => {
 
       fromStudent.groupHostelChoice = chosenHostel._id;
       await fromStudent.save();
-      console.log("[sendRoommateRequest] Created new group and saved hostel choice");
+      console.log(
+        "[sendRoommateRequest] Created new group and saved hostel choice"
+      );
     } else {
       chosenHostel = await Hostel.findById(fromStudent.groupHostelChoice);
-      console.log(`[sendRoommateRequest] Using existing hostel: ${chosenHostel?.name}`);
+      console.log(
+        `[sendRoommateRequest] Using existing hostel: ${chosenHostel?.name}`
+      );
     }
 
     // Check group size
@@ -125,7 +141,9 @@ exports.sendRoommateRequest = async (req, res) => {
       groupId: groupId,
       college,
     });
-    console.log(`[sendRoommateRequest] Current group size: ${groupMembers.length}`);
+    console.log(
+      `[sendRoommateRequest] Current group size: ${groupMembers.length}`
+    );
 
     if (groupMembers.length + 1 > chosenHostel.roomCapacity) {
       console.log("[sendRoommateRequest] Group size limit exceeded");
@@ -148,7 +166,9 @@ exports.sendRoommateRequest = async (req, res) => {
       groupId: groupId,
       createdAt: new Date(),
     });
-    console.log(`[sendRoommateRequest] Created request with ID: ${request._id}`);
+    console.log(
+      `[sendRoommateRequest] Created request with ID: ${request._id}`
+    );
 
     console.log("[sendRoommateRequest] Sending OTP email...");
     await sendOtp(
@@ -177,14 +197,21 @@ exports.sendRoommateRequest = async (req, res) => {
 };
 
 exports.verifyRoommateOtp = async (req, res) => {
+  console.log("[verifyRoommateOtp] Starting OTP verification process...");
   try {
     const { toRoll, otp } = req.body;
     const fromRoll = req.user.rollNo;
+    console.log(
+      `[verifyRoommateOtp] From: ${fromRoll}, To: ${toRoll}, OTP: ${otp}`
+    );
 
     const fromStudent = await Student.findOne({ rollNo: fromRoll }).populate(
       "groupHostelChoice"
     );
     const toStudent = await Student.findOne({ rollNo: toRoll });
+    console.log(
+      `[verifyRoommateOtp] Found students - From: ${fromStudent?.name}, To: ${toStudent?.name}`
+    );
 
     if (!fromStudent || !toStudent) {
       return res
@@ -233,6 +260,7 @@ exports.verifyRoommateOtp = async (req, res) => {
       (request.createdAt &&
         Date.now() - request.createdAt.getTime() > 10 * 60 * 1000)
     ) {
+      console.log("[verifyRoommateOtp] Invalid OTP or expired request");
       return res
         .status(400)
         .json({ message: "Invalid OTP or request expired" });
@@ -260,6 +288,9 @@ exports.verifyRoommateOtp = async (req, res) => {
       }
     }
 
+    // Update student records
+    console.log("[verifyRoommateOtp] Updating student records...");
+
     if (fromStudent.groupHostelChoice) {
       toStudent.groupHostelChoice = fromStudent.groupHostelChoice;
     }
@@ -267,13 +298,39 @@ exports.verifyRoommateOtp = async (req, res) => {
     request.status = "accepted";
     toStudent.groupId = request.groupId;
 
-    await toStudent.save();
-    await request.save();
+    // Set isRegistered to true for both students
+    fromStudent.isRegistered = true;
+    toStudent.isRegistered = true;
+    console.log("[verifyRoommateOtp] Marking both students as registered");
 
-    res.status(200).json({ message: "Roommate added to group successfully" });
+    // Save all changes
+    await Promise.all([toStudent.save(), fromStudent.save(), request.save()]);
+    console.log("[verifyRoommateOtp] Successfully saved all changes");
+
+    res.status(200).json({
+      success: true,
+      message: "Roommate added to group successfully",
+      data: {
+        fromStudent: {
+          name: fromStudent.name,
+          rollNo: fromStudent.rollNo,
+          isRegistered: fromStudent.isRegistered,
+        },
+        toStudent: {
+          name: toStudent.name,
+          rollNo: toStudent.rollNo,
+          isRegistered: toStudent.isRegistered,
+        },
+      },
+    });
   } catch (err) {
-    console.error("VerifyRoommateOtp Error:", err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("[verifyRoommateOtp] Error:", err);
+    console.error("[verifyRoommateOtp] Stack:", err.stack);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
   }
 };
 

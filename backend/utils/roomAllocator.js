@@ -17,7 +17,7 @@ const allocateRoomForStudent = async (student) => {
       preferredHostel = await Hostel.findOne({
         college: student.college,
         gender: student.gender,
-      }).sort({ roomCapacity: -1 });
+      }).sort({ roomCapacity: 1 });
       console.log(
         `[allocateRoom] Selected default hostel: ${preferredHostel?._id}`
       );
@@ -146,7 +146,8 @@ const allocateRoomForGroup = async (students) => {
       preferredHostel = await Hostel.findOne({
         college: leader.college,
         gender: leader.gender,
-      }).sort({ roomCapacity: -1 });
+        roomCapacity: { $gte: groupSize },
+      }).sort({ roomCapacity: 1 });
       console.log(
         `[allocateGroup] Selected default hostel: ${preferredHostel?._id}`
       );

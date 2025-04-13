@@ -27,6 +27,8 @@ exports.allocateRooms = async (req, res) => {
     const unallocatedStudents = await Student.find({
       college: collegeId,
       isAllocated: false,
+      role: "student",
+      isRegistered: true,
     });
     console.log(
       `[allocateRooms] Found ${unallocatedStudents.length} unallocated students`
