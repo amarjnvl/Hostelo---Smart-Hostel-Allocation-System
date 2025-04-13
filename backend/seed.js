@@ -30,7 +30,7 @@ const seed = async () => {
         gender: "male",
         college: college._id,
         totalRooms: 4,
-        roomCapacity: 2,
+        roomCapacity: 3,
       },
       {
         name: "Opal",
