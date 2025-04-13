@@ -31,6 +31,10 @@ const studentSchema = new mongoose.Schema(
       enum: ["student", "admin"],
       default: "student",
     },
+    isLeader: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

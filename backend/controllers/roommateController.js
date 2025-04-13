@@ -93,6 +93,7 @@ exports.sendRoommateRequest = async (req, res) => {
       console.log("[sendRoommateRequest] Creating new group...");
       groupId = `group_${fromStudent._id}_${Date.now()}`;
       fromStudent.groupId = groupId;
+      fromStudent.isLeader = true; // Mark as group leader
 
       if (!hostelId) {
         console.log(
@@ -133,6 +134,14 @@ exports.sendRoommateRequest = async (req, res) => {
       console.log(
         `[sendRoommateRequest] Using existing hostel: ${chosenHostel?.name}`
       );
+    }
+
+    // Add check for permission to send request
+    if (fromStudent.groupId && !fromStudent.isLeader) {
+      return res.status(403).json({
+        success: false,
+        message: "Only group leader can send roommate requests",
+      });
     }
 
     // Check group size
@@ -219,6 +228,7 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "One or both students not found" });
     }
 
+    // Basic validations
     if (fromStudent.gender !== toStudent.gender) {
       return res
         .status(400)
@@ -237,16 +247,7 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "One of the students is already allocated a room" });
     }
 
-    if (fromStudent.groupId && fromStudent.groupId === toStudent.groupId) {
-      return res.status(400).json({ message: "Already in the same group" });
-    }
-
-    if (toStudent.groupId && toStudent.groupId !== fromStudent.groupId) {
-      return res
-        .status(400)
-        .json({ message: "Student already in another group" });
-    }
-
+    // Check the request and OTP
     const request = await RoommateRequest.findOne({
       from: fromStudent._id,
       to: toStudent._id,
@@ -266,60 +267,102 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "Invalid OTP or request expired" });
     }
 
-    const groupMembers = await Student.find({ groupId: request.groupId });
-    const allocated = groupMembers.find((stu) => stu.isAllocated);
-
-    if (allocated) {
-      const allocation = await Allocation.findOne({
-        students: allocated._id,
-      }).populate("room");
-
-      if (!allocation || !allocation.room) {
-        return res.status(400).json({ message: "Allocated room not found" });
-      }
-
-      const room = await Room.findById(allocation.room._id).populate(
-        "occupants"
-      );
-      if (room.occupants.length >= room.capacity) {
-        return res
-          .status(400)
-          .json({ message: "Room is full. Cannot add to group." });
+    // Keep only the leader check
+    if (fromStudent.groupId) {
+      // Check if request initiator is the group leader
+      if (!fromStudent.isLeader) {
+        return res.status(403).json({
+          success: false,
+          message: "Only group leader can add new members",
+        });
       }
     }
 
-    // Update student records
+    // After finding the students and before processing the request
+    if (fromStudent.groupId) {
+      // Check if request initiator is the group leader
+      if (!fromStudent.isLeader) {
+        return res.status(403).json({
+          success: false,
+          message: "Only group leader can add new members",
+        });
+      }
+    }
+
+    // Check group size against hostel capacity
+    console.log("[verifyRoommateOtp] Checking group capacity...");
+    const chosenHostel = await Hostel.findById(fromStudent.groupHostelChoice);
+
+    if (!chosenHostel) {
+      return res.status(400).json({
+        success: false,
+        message: "Hostel not found",
+      });
+    }
+
+    const groupMembers = await Student.find({
+      groupId: fromStudent.groupId || "new_group",
+      college: fromStudent.college,
+    });
+
+    if (groupMembers.length + 1 > chosenHostel.roomCapacity) {
+      console.log("[verifyRoommateOtp] Group size limit exceeded");
+      return res.status(400).json({
+        success: false,
+        message: `Cannot add more members. Max allowed is ${chosenHostel.roomCapacity} per room in this hostel.`,
+      });
+    }
+
+    // Continue with existing group creation/update logic
     console.log("[verifyRoommateOtp] Updating student records...");
+
+    // Create a new group if neither student has one
+    if (!fromStudent.groupId && !toStudent.groupId) {
+      const newGroupId = `group_${fromStudent._id}_${Date.now()}`;
+      fromStudent.groupId = newGroupId;
+      fromStudent.isLeader = true; // First member is the leader
+      toStudent.groupId = newGroupId;
+      toStudent.isLeader = false;
+    } else if (fromStudent.groupId && !toStudent.groupId) {
+      toStudent.groupId = fromStudent.groupId;
+      toStudent.isLeader = false;
+    } else {
+      return res.status(400).json({
+        message: "Invalid group state",
+        details: "One of the students is already in a different group",
+      });
+    }
 
     if (fromStudent.groupHostelChoice) {
       toStudent.groupHostelChoice = fromStudent.groupHostelChoice;
     }
 
     request.status = "accepted";
-    toStudent.groupId = request.groupId;
 
     // Set isRegistered to true for both students
     fromStudent.isRegistered = true;
     toStudent.isRegistered = true;
-    console.log("[verifyRoommateOtp] Marking both students as registered");
 
     // Save all changes
     await Promise.all([toStudent.save(), fromStudent.save(), request.save()]);
+
     console.log("[verifyRoommateOtp] Successfully saved all changes");
 
     res.status(200).json({
       success: true,
-      message: "Roommate added to group successfully",
+      message: "Roommate added successfully",
       data: {
         fromStudent: {
           name: fromStudent.name,
           rollNo: fromStudent.rollNo,
           isRegistered: fromStudent.isRegistered,
+          groupId: fromStudent.groupId,
         },
         toStudent: {
           name: toStudent.name,
           rollNo: toStudent.rollNo,
           isRegistered: toStudent.isRegistered,
+          groupId: toStudent.groupId,
         },
       },
     });
