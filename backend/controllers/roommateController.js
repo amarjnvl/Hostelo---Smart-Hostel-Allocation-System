@@ -185,7 +185,15 @@ exports.sendRoommateRequest = async (req, res) => {
       `<p>Hello <strong>${toStudent.name}</strong>,</p>
       <p>Your OTP for roommate request is <strong>${otp}</strong>.</p>
       <p>This request was initiated by <strong>${fromStudent.name}</strong> (Roll No: ${fromStudent.rollNo}).</p>
-      <p>The OTP is valid for 10 minutes.</p>`,
+      <p>The OTP is valid for 10 minutes.</p>
+      
+      <ul>
+        <li><strong>NOTE:</strong> <strong>Once you verify the OTP, you will <strong>NOT be able to deregister yourself </strong>from the hostel allocation process.</strong></li>
+        <br />
+        <li><strong>Additionally:</strong> <strong>You will <strong>NOT be able to add any of your friends</strong> to your group.</strong> -- <strong>Only the group leader, ${fromStudent.name}, will be able to add his and your friends to the group.</strong></li>
+        <li><strong>${fromStudent.name} might add some friends which you might <strong>NOT want to room with </strong>, so please make sure to consent with ${fromStudent.name} before verifying the OTP.</strong></li>
+      </ul>
+      `,
       "Roommate Request OTP"
     );
     console.log("[sendRoommateRequest] OTP email sent successfully");

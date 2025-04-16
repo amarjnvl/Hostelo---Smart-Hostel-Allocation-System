@@ -33,7 +33,7 @@ const sendOtp = async (
     });
 
     const mailOptions = {
-      from: `"Hostel System" <${process.env.EMAIL_USER}>`,
+      from: `"Hostel Office" <${process.env.EMAIL_USER}>`,
       to: email,
       subject,
       html: message,
