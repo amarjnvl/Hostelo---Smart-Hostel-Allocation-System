@@ -4,7 +4,7 @@ import { MdPerson } from 'react-icons/md';
 import Sidebar from '../components/Sidebar';
 import Button from '../components/Button';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProfile } from '../redux/slices/studentSlice'; // Import fetchProfile action
+import { fetchProfile } from '../redux/slices/studentSlice';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -15,9 +15,12 @@ const Profile = () => {
 
   // Fetch profile if student data is not available yet
   useEffect(() => {
+    console.log("[useEffect] Checking if student is null...");
+
     if (student === null) {
       const rollNo = localStorage.getItem('rollNo');
       if (rollNo) {
+        console.log(`[useEffect] Retrieved rollNo from localStorage: ${rollNo}`);
         dispatch(fetchProfile(rollNo));
       }
     }
@@ -25,18 +28,23 @@ const Profile = () => {
 
   // If profile is still loading, show a loading state
   if (loading) {
+    console.log("[Render] Profile is loading...");
     return <div>Loading...</div>;
   }
 
   // If there is an error, show an error message
   if (error) {
+    console.log("[Render] Error encountered:", error);
     return <div className="text-red-500">Error: {error}</div>;
   }
 
   // If no student data, handle accordingly (e.g., redirect or show message)
   if (!student) {
+    console.log("[Render] No student data found after loading.");
     return <div>No profile data found</div>;
   }
+
+  console.log("[Render] Student data loaded:", student);
 
   return (
     <div className="flex min-h-screen bg-blue-50">

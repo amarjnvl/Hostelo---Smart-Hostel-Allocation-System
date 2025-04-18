@@ -35,6 +35,15 @@ const studentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    roommatePreference: {
+      desiredCount: { type: Number, default: 0 },
+      savedAt: { type: Date, default: Date.now },
+    },
+    pendingGroupRequest: {
+      count: { type: Number },
+      hostel: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel" },
+      requestedAt: { type: Date },
+    },
   },
   { timestamps: true }
 );

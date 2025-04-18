@@ -7,12 +7,47 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-export const sendOtpAPI = (rollNo) => api.post("/auth/send-otp", { rollNo });
-export const verifyOtpAPI = (rollNo, otp) =>
-  api.post("/auth/verify-otp", { rollNo, otp }).then((res) => res.data);
-export const getProfileAPI = (rollNo) =>
-  api.get(`/students/profile/${rollNo}`).then((res) => res.data);
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("rollNo");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const sendOtpAPI = async (rollNo) => {
+  try {
+    const response = await api.post("/auth/send-otp", { rollNo });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const verifyOtpAPI = async (rollNo, otp) => {
+  try {
+    const response = await api.post("/auth/verify-otp", { rollNo, otp });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};
+
+export const getProfileAPI = async (rollNo) => {
+  try {
+    const response = await api.get(`/students/profile/${rollNo}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: error.message };
+  }
+};

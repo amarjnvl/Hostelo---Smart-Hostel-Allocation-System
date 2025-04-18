@@ -1,10 +1,35 @@
 const Student = require("../models/Student");
 const RoommateRequest = require("../models/RoommateRequest");
-const Allocation = require("../models/Allocation");
-const Room = require("../models/Room");
 const generateOtp = require("../utils/generateOtp");
 const sendOtp = require("../utils/sendOtp");
 const Hostel = require("../models/Hostel");
+
+exports.initiateGroupIntent = async (req, res) => {
+  try {
+    const { count, hostelId } = req.body;
+
+    if (!count || count <= 0 || !hostelId) {
+      return res.status(400).json({ message: "Invalid group request" });
+    }
+
+    const student = await Student.findById(req.student._id);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    student.pendingGroupRequest = {
+      count,
+      hostel: hostelId,
+      requestedAt: new Date(),
+    };
+
+    await student.save();
+    return res.status(200).json({ message: "Group request initiated" });
+  } catch (error) {
+    console.error("Error in initiateGroupIntent:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 exports.sendRoommateRequest = async (req, res) => {
   console.log("[sendRoommateRequest] Starting roommate request process...");

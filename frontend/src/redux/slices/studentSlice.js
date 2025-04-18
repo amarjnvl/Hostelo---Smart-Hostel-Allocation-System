@@ -28,6 +28,7 @@ export const fetchProfile = createAsyncThunk(
   "student/fetchProfile",
   async (rollNo) => {
     const res = await getProfileAPI(rollNo);
+    console.log("Fetched profile:", res);
     return res;
   }
 );
@@ -40,6 +41,7 @@ const studentSlice = createSlice({
     token: tokenFromStorage || null,
     loading: false,
     error: null,
+    pendingGroupRequest: null,
   },
   reducers: {
     logout: (state) => {
@@ -47,6 +49,7 @@ const studentSlice = createSlice({
       localStorage.removeItem("rollNo");
       state.student = null;
       state.token = null;
+      state.pendingGroupRequest = null;
     },
   },
   extraReducers: (builder) => {
@@ -54,19 +57,16 @@ const studentSlice = createSlice({
       .addCase(sendOtp.pending, (state) => {
         state.loading = true;
       })
-      .addCase(sendOtp.fulfilled, (state, action) => {
+      .addCase(sendOtp.fulfilled, (state) => {
         state.loading = false;
-        state.rollNo = action.payload;
+      })
+      .addCase(sendOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
       .addCase(verifyOtp.fulfilled, (state, action) => {
-        state.token = action.payload.token;
-        state.student = action.payload.student;
         state.loading = false;
-        state.error = null;
-      })
-      .addCase(verifyOtp.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.pendingGroupRequest = action.payload;
       })
       .addCase(verifyOtp.rejected, (state, action) => {
         state.loading = false;
@@ -75,12 +75,10 @@ const studentSlice = createSlice({
       .addCase(fetchProfile.fulfilled, (state, action) => {
         state.student = action.payload;
       })
-      .addCase(sendOtp.rejected, fetchProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
+      .addCase(fetchProfile.rejected, (state, action) => {
+        state.error = action.payload;
       });
   },
 });
-
 export const { logout } = studentSlice.actions;
 export default studentSlice.reducer;

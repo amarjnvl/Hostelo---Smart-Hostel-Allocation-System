@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { logout } from '../redux/slices/studentSlice';
 import logo from '../assets/Images/logo.png';
 import {
     MdDashboard,
@@ -8,6 +10,7 @@ import {
     MdMessage,
     MdMenu,
     MdClose,
+    MdLogout, // Add this import
 } from 'react-icons/md';
 
 const navItems = [
@@ -25,10 +28,17 @@ const getNavLinkClass = ({ isActive }) =>
 
 const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     // functions 
     const toggleSidebar = () => setIsOpen(!isOpen);
     const closeSidebar = () => setIsOpen(false);
+
+    const handleLogout = () => {
+        dispatch(logout());
+        navigate('/login');
+    };
 
     return (
         <div>
@@ -66,18 +76,29 @@ const Sidebar = () => {
 
                 {/*  Nav Items */}
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    {navItems.map(({ index, name, path, icon: Icon }) => (
+                    {navItems.map((item) => (
                         <NavLink
-                            key={index}
-                            to={path}
+                            key={item.path}
+                            to={item.path}
                             className={getNavLinkClass}
                             onClick={closeSidebar}
                         >
-                            <Icon className="w-5 h-5" />
-                            <span>{name}</span>
+                            <item.icon className="w-5 h-5" />
+                            <span>{item.name}</span>
                         </NavLink>
                     ))}
                 </nav>
+
+                {/* Logout Button */}
+                <div className="p-4 border-t">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors duration-300"
+                    >
+                        <MdLogout className="w-5 h-5" />
+                        <span>Logout</span>
+                    </button>
+                </div>
             </div>
 
             {/* Overlay on mobile */}
@@ -90,6 +111,5 @@ const Sidebar = () => {
         </div>
     );
 };
-
 
 export default Sidebar;
