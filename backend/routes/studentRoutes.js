@@ -7,9 +7,6 @@ const {
   updateStudent,
   registerForHostel,
   getStudentGroup,
-  setRoommatePreference,
-  removeFromGroup,
-  leaveGroup,
 } = require("../controllers/studentController");
 
 // Protected routes
@@ -19,16 +16,13 @@ router.use(protect);
 router.get("/", adminProtect, getAllStudents);
 
 // Student routes
-router.get("/profile/:rollNo", getStudentByRollNo);
-router.put("/:studentId", updateStudent);
+router.get("/profile/:rollNo", protect, getStudentByRollNo);
+router.put("/:studentId", protect, updateStudent);
 
-// Hostel registration routes
-router.post("/register", registerForHostel);
-router.post("/roommate-preference", setRoommatePreference);
-router.get("/group/:groupId", getStudentGroup);
+// Add this new route
+router.post("/register", protect, registerForHostel);
 
-// Group management routes
-router.post("/remove-from-group", removeFromGroup);
-router.post("/leave-group", leaveGroup);
+// Add this new route
+router.get("/group/:groupId", protect, getStudentGroup);
 
 module.exports = router;
