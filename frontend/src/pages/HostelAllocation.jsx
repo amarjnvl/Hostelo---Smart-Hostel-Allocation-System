@@ -15,6 +15,7 @@ const HostelAllocation = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    
     const fetchAllocationDetails = async () => {
       console.log('[HostelAllocation] Fetching allocation details...');
       try {

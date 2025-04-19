@@ -1,14 +1,18 @@
 import axios from "axios";
 
+/**
+ * Creates an Axios instance with the base URL and withCredentials enabled.
+ */
 const api = axios.create({
   baseURL: "http://localhost:5000/api",
   withCredentials: true,
 });
 
-// Add token refresh logic
-let isRefreshing = false;
-let failedQueue = [];
-
+/**
+ * Process the queue of failed requests and resolves or rejects them based on the error.
+ * @param {Error} error The error to be processed.
+ * @param {string} [token] The new token to be used for retrying the requests.
+ */
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -20,28 +24,60 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Add request logging
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+/**
+ * Logs the request to the console.
+ * @param {Object} config The request configuration.
+ */
+const logRequest = (config) => {
   console.log("[API Request]", {
     url: config.url,
     method: config.method,
     headers: config.headers,
   });
+};
+
+/**
+ * Logs the response to the console.
+ * @param {Object} response The response from the server.
+ */
+const logResponse = (response) => {
+  console.log("[API Response]", {
+    url: response.config.url,
+    status: response.status,
+    data: response.data,
+  });
+};
+
+/**
+ * Logs the error to the console.
+ * @param {Error} error The error to be logged.
+ */
+const logError = (error) => {
+  console.error("[API Error]", {
+    url: error.config?.url,
+    status: error.response?.status,
+    message: error.response?.data?.message,
+  });
+};
+
+/**
+ * Handles the request and response interceptors.
+ */
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  logRequest(config);
   return config;
 });
 
-// Add response logging
+/**
+ * Handles the response interceptor.
+ */
 api.interceptors.response.use(
   (response) => {
-    console.log("[API Response]", {
-      url: response.config.url,
-      status: response.status,
-      data: response.data,
-    });
+    logResponse(response);
     return response;
   },
   async (error) => {
@@ -84,11 +120,7 @@ api.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    console.error("[API Error]", {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.response?.data?.message,
-    });
+    logError(error);
     return Promise.reject(error);
   }
 );

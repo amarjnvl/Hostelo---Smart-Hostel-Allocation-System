@@ -19,6 +19,7 @@ const Request = () => {
     const location = useLocation();
     const hostelId = new URLSearchParams(location.search).get('hostelId');
 
+
     useEffect(() => {
         const fetchGroupAndHostelDetails = async () => {
             try {

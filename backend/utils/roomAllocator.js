@@ -28,6 +28,7 @@ const allocateRoomForStudent = async (student) => {
           $match: {
             college: student.college,
             gender: student.gender,
+            isAvailableForAllocation: true,
           },
         },
         {
@@ -64,7 +65,9 @@ const allocateRoomForStudent = async (student) => {
     let rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
-    }).populate("occupants").populate("hostel");
+    })
+      .populate("occupants")
+      .populate("hostel");
     console.log(
       `[allocateRoom] Found ${rooms.length} available rooms in preferred hostel`
     );
@@ -90,7 +93,9 @@ const allocateRoomForStudent = async (student) => {
         rooms = await Room.find({
           hostel: preferredHostel._id,
           isFull: false,
-        }).populate("occupants").populate("hostel");
+        })
+          .populate("occupants")
+          .populate("hostel");
         console.log(
           `[allocateRoom] Found ${rooms.length} rooms in alternative hostel`
         );
@@ -148,13 +153,14 @@ const allocateRoomForStudent = async (student) => {
 
     // After creating and saving the allocation:
 
-    const populatedAllocation = await Allocation.findById(allocation._id)
-      .populate({
-        path: 'room',
-        populate: {
-          path: 'hostel'
-        }
-      });
+    const populatedAllocation = await Allocation.findById(
+      allocation._id
+    ).populate({
+      path: "room",
+      populate: {
+        path: "hostel",
+      },
+    });
 
     return populatedAllocation;
   } catch (err) {
@@ -191,6 +197,7 @@ const allocateRoomForGroup = async (students) => {
         college: leader.college,
         gender: leader.gender,
         roomCapacity: { $gte: groupSize },
+        isAvailableForAllocation: true,
       }).sort({ roomCapacity: 1 });
     }
 
@@ -208,7 +215,9 @@ const allocateRoomForGroup = async (students) => {
     let rooms = await Room.find({
       hostel: preferredHostel._id,
       isFull: false,
-    }).populate("occupants").populate("hostel");
+    })
+      .populate("occupants")
+      .populate("hostel");
     console.log(`[allocateGroup] Found ${rooms.length} available rooms`);
 
     console.log(
@@ -248,7 +257,9 @@ const allocateRoomForGroup = async (students) => {
         rooms = await Room.find({
           hostel: hostel._id,
           isFull: false,
-        }).populate("occupants").populate("hostel");
+        })
+          .populate("occupants")
+          .populate("hostel");
 
         selectedRoom =
           rooms.find((r) => r.capacity - r.occupants.length === groupSize) ||
@@ -300,13 +311,14 @@ const allocateRoomForGroup = async (students) => {
 
     // After creating and saving the allocation:
 
-    const populatedAllocation = await Allocation.findById(allocation._id)
-      .populate({
-        path: 'room',
-        populate: {
-          path: 'hostel'
-        }
-      });
+    const populatedAllocation = await Allocation.findById(
+      allocation._id
+    ).populate({
+      path: "room",
+      populate: {
+        path: "hostel",
+      },
+    });
 
     return populatedAllocation;
   } catch (err) {

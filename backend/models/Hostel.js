@@ -11,6 +11,7 @@ const hostelSchema = new mongoose.Schema(
     },
     totalRooms: { type: Number, required: true },
     roomCapacity: { type: Number, enum: [1, 2, 3], required: true },
+    isAvailableForAllocation: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
