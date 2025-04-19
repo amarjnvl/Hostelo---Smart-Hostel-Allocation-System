@@ -60,7 +60,9 @@ const HostelList = () => {
   };
 
   const filteredHostels = hostels.filter(
-    (hostel) => hostel.gender === student?.gender
+    (hostel) =>
+      hostel.gender === student?.gender &&
+      hostel.isAvailableForAllocation // Only show available hostels
   );
 
   return (
