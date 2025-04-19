@@ -11,16 +11,15 @@ const Profile = () => {
   const dispatch = useDispatch();
 
   // Fetch the student data from Redux store
-  const { student, loading, error } = useSelector((state) => state.student);
+  const { student, loading, error, pendingGroupRequest } = useSelector((state) => state.student);
 
   // Fetch profile if student data is not available yet
   useEffect(() => {
-    console.log("[useEffect] Checking if student is null...");
-
     if (student === null) {
+      console.log('[Profile] No student data found, fetching profile');
       const rollNo = localStorage.getItem('rollNo');
+      console.log('[Profile] rollNo found:', rollNo);
       if (rollNo) {
-        console.log(`[useEffect] Retrieved rollNo from localStorage: ${rollNo}`);
         dispatch(fetchProfile(rollNo));
       }
     }
@@ -28,23 +27,18 @@ const Profile = () => {
 
   // If profile is still loading, show a loading state
   if (loading) {
-    console.log("[Render] Profile is loading...");
     return <div>Loading...</div>;
   }
 
   // If there is an error, show an error message
   if (error) {
-    console.log("[Render] Error encountered:", error);
     return <div className="text-red-500">Error: {error}</div>;
   }
 
   // If no student data, handle accordingly (e.g., redirect or show message)
   if (!student) {
-    console.log("[Render] No student data found after loading.");
     return <div>No profile data found</div>;
   }
-
-  console.log("[Render] Student data loaded:", student);
 
   return (
     <div className="flex min-h-screen bg-blue-50">
@@ -77,10 +71,27 @@ const Profile = () => {
             <div className="mt-8 flex justify-center">
               <Button
                 text="Go to Hostel Allotment"
-                onClick={() => navigate('/hostels')}
+                onClick={() => {
+                  console.log('[Profile] Navigating to Hostel Allotment');
+                  navigate('/hostels');
+                }}
                 className="w-full sm:w-auto"
               />
             </div>
+
+            {pendingGroupRequest && (
+              <div className="mt-8 text-center">
+                <p className="text-sm text-gray-500">You have a pending group request</p>
+                <Button
+                  text="View Request"
+                  onClick={() => {
+                    console.log('[Profile] Navigating to Roommate Requests');
+                    navigate('/roommate-requests');
+                  }}
+                  className="w-full sm:w-auto"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -89,3 +100,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

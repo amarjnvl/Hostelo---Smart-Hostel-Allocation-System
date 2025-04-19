@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendOtp, verifyOtp } from "../redux/slices/studentSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 
 const Login = () => {
     const [rollNo, setRollNo] = useState("");
@@ -9,22 +9,14 @@ const Login = () => {
     const [error, setError] = useState("");
     const [isOtpSent, setIsOtpSent] = useState(false);
     const dispatch = useDispatch();
-    const { token, loading } = useSelector((state) => state.student);
+    const { loading } = useSelector((state) => state.student);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // Check if user is already logged in
-        const token = localStorage.getItem('token');
-        if (token) {
-            navigate('/dashboard');
-        }
-    }, [navigate]);
-
-    useEffect(() => {
-        if (token) {
-            navigate("/dashboard");
-        }
-    }, [token, navigate]);
+    // Check if already authenticated
+    const token = localStorage.getItem('token');
+    if (token) {
+        return <Navigate to="/" replace />;
+    }
 
     const handleOtpSend = async (e) => {
         e.preventDefault();
@@ -55,7 +47,7 @@ const Login = () => {
             if (response.token) {
                 localStorage.setItem("token", response.token);
                 localStorage.setItem("rollNo", rollNo);
-                navigate('/dashboard');
+                navigate('/', { replace: true });
             }
         } catch (err) {
             setError(err.message || "Verification failed");

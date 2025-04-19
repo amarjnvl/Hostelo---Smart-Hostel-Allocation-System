@@ -23,47 +23,45 @@ const HostelList = () => {
   }, [student, dispatch]);
 
   useEffect(() => {
-    if (student?.college?._id) {
-      dispatch(fetchHostels(student.college._id));
+    if (student?.college) {
+      dispatch(fetchHostels(student.college));
     }
   }, [student, dispatch]);
 
   const handleHostelSelect = async (hostelId) => {
-    if (!student?.rollNo) return;
+    if (!hostelId) {
+      console.error("Hostel ID is undefined", hostelId);
+      return;
+    }
 
     try {
       setLoadingSelect(true);
+      await api.post("/students/register", {
+        hostelId: hostelId, // <-- send hostelId as required by backend
+      });
 
-      // 1. Register preferred hostel
-      try {
-        await api.post("/students/register", {
-          preferredHostel: hostelId,
-        });
-      } catch (error) {
-        const message = error.response?.data?.message || "Failed to register hostel preference";
-        alert(message);
-        setLoadingSelect(false);
-        return;
-      }
+      console.log("Hostel selected successfully", hostelId);
 
       // 2. Ask if they want roommates
       const wantsRoommate = window.confirm("Would you like to add roommates?");
 
       if (wantsRoommate) {
-        // Navigate to roommate request page
         navigate(`/requests?hostelId=${hostelId}`);
       } else {
-        // If no roommates wanted, inform user and navigate to dashboard
         alert("You'll be allocated a room with random roommates later.");
         navigate("/dashboard");
       }
-
     } catch (err) {
+      console.error(err.response?.data?.message || "An error occurred");
       alert(err.response?.data?.message || "An error occurred");
     } finally {
       setLoadingSelect(false);
     }
   };
+
+  const filteredHostels = hostels.filter(
+    (hostel) => hostel.gender === student?.gender
+  );
 
   return (
     <div className="flex min-h-screen bg-blue-50">
@@ -71,7 +69,22 @@ const HostelList = () => {
       <div className="flex-1 p-6 md:p-10">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Hostel Allocation</h1>
 
-        {student && student.preferredHostel ? (
+        {student && student.isAllocated ? (
+          <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h2 className="text-xl font-bold mb-3 text-gray-800">Hostel Allocated!</h2>
+            <div className="space-y-2 mb-6">
+              <p><strong>Name:</strong> {student.name}</p>
+              <p><strong>Roll No:</strong> {student.rollNo}</p>
+              {/* <p><strong>Allocated Hostel:</strong> {student.preferredHostel.name}</p> */}
+              <p className="text-green-600 font-medium">Your hostel has been successfully allocated.</p>
+            </div>
+            <Button
+              text="Go to Dashboard"
+              onClick={() => navigate('/dashboard')}
+              className="bg-blue-500 hover:bg-blue-600"
+            />
+          </div>
+        ) : student && student.preferredHostel ? (
           <div className="bg-white p-6 rounded-xl shadow-md mb-8">
             <h2 className="text-xl font-bold mb-3 text-gray-800">Registered</h2>
             <p><strong>Name:</strong> {student.name}</p>
@@ -96,7 +109,7 @@ const HostelList = () => {
               <p className="text-red-500">{error}</p>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {hostels.map((hostel) => (
+                {filteredHostels.map((hostel) => (
                   <div key={hostel._id} className="p-5 bg-white shadow rounded-xl border">
                     <h3 className="text-lg font-semibold">{hostel.name}</h3>
                     <p>Total Rooms: {hostel.totalRooms}</p>
@@ -118,3 +131,4 @@ const HostelList = () => {
 };
 
 export default HostelList;
+

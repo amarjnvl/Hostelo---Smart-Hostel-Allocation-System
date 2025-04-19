@@ -15,19 +15,12 @@ function App() {
     <Routes>
       <Route path='/dashboard' element={<PrivateRoute><Dashboard /></PrivateRoute>}></Route>
       <Route path='/' element={<PrivateRoute><Profile /></PrivateRoute>}></Route>
-      <Route path='/requests' element={<PrivateRoute><RoommateRequests /></PrivateRoute>}></Route>
+      <Route path='/requests' element={<PrivateRoute><Request /></PrivateRoute>}></Route>
+      <Route path='/request' element={<PrivateRoute><RoommateRequests /></PrivateRoute>}></Route>
       <Route path='/allotted' element={<PrivateRoute><AllottedRoom /></PrivateRoute>}></Route>
       <Route path='/hostels' element={<PrivateRoute><HostelList /></PrivateRoute>}></Route>
       <Route path='/login' element={<Login />}></Route>
       <Route path='/signup' element={<SignUp />}></Route>
-      <Route 
-        path="/request" 
-        element={
-          <PrivateRoute>
-            <Request />
-          </PrivateRoute>
-        } 
-      />
     </Routes>
   );
 }

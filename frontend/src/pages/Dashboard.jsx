@@ -10,29 +10,32 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [roommateGroup, setRoommateGroup] = useState([]);
     const [hostelName, setHostelName] = useState('');
+    const [allocation, setAllocation] = useState(null);
     const navigate = useNavigate();
 
     const { student } = useSelector((state) => state.student);
 
     useEffect(() => {
-        const fetchGroupAndHostelDetails = async () => {
+        const fetchAllDetails = async () => {
             try {
                 setLoading(true);
-                if (!student?.groupId) return;
 
-                // Fetch group details
-                const groupResponse = await api.get(`/students/group/${student.groupId}`);
-                if (groupResponse.data.success) {
-                    setRoommateGroup(groupResponse.data.data);
+                // Fetch allocation details first
+                const allocationResponse = await api.get('/students/allocation');
+                setAllocation(allocationResponse.data);
 
-                    // Get the hostel ID from the first group member
-                    const hostelId = groupResponse.data.data[0]?.groupHostelChoice;
+                // If not allocated and has groupId, fetch group details
+                if (!allocationResponse.data.allocated && student?.groupId) {
+                    const groupResponse = await api.get(`/students/group/${student.groupId}`);
+                    if (groupResponse.data.success) {
+                        setRoommateGroup(groupResponse.data.data);
 
-                    // Only fetch hostel if we have a valid hostel ID
-                    if (hostelId && typeof hostelId === 'string') {
-                        const hostelResponse = await api.get(`/hostels/${hostelId}`);
-                        if (hostelResponse.data.success) {
-                            setHostelName(hostelResponse.data.name);
+                        const hostelId = groupResponse.data.data[0]?.groupHostelChoice;
+                        if (hostelId && typeof hostelId === 'string') {
+                            const hostelResponse = await api.get(`/hostels/${hostelId}`);
+                            if (hostelResponse.data.success) {
+                                setHostelName(hostelResponse.data.data.name);
+                            }
                         }
                     }
                 }
@@ -43,7 +46,7 @@ const Dashboard = () => {
             }
         };
 
-        fetchGroupAndHostelDetails();
+        fetchAllDetails();
     }, [student?.groupId]);
 
     const handleLeaveGroup = async () => {
@@ -72,68 +75,98 @@ const Dashboard = () => {
                     ) : error ? (
                         <div className="text-red-600 bg-red-50 p-4 rounded-lg">{error}</div>
                     ) : (
-                        <div className="bg-white rounded-xl shadow-md p-6">
-                            <div className="mb-6">
-                                <h2 className="text-xl font-semibold mb-4">Your Hostel Registration</h2>
-                                {student?.preferredHostel ? (
-                                    <div className="bg-green-50 p-4 rounded-lg">
-                                        <p className="text-green-700">You are registered for hostel allocation</p>
-                                        <p className="text-sm text-green-600 mt-1">
-                                            Preferred Hostel: {student.preferredHostel.name}
-                                        </p>
+                        <div className="space-y-6">
+                            {/* Room Allocation Status */}
+                            <div className="bg-white rounded-xl shadow-md p-6">
+                                <h2 className="text-xl font-semibold mb-4">Room Allocation Status</h2>
+                                {allocation?.allocated ? (
+                                    <div className="bg-green-50 p-6 rounded-lg">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-green-800">
+                                                Room Allocated Successfully
+                                            </h3>
+                                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                                                Allocated
+                                            </span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <p className="text-gray-700">
+                                                <span className="font-medium">Hostel:</span> {allocation.hostel}
+                                            </p>
+                                            <p className="text-gray-700">
+                                                <span className="font-medium">Room Number:</span> {allocation.roomNumber}
+                                            </p>
+                                            <div className="mt-4">
+                                                <h4 className="font-medium mb-2">Roommates:</h4>
+                                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                                    {allocation.roommates.length > 0 ? (
+                                                        <ul className="space-y-2">
+                                                            {allocation.roommates.map((roommate, index) => (
+                                                                <li key={index} className="flex items-center">
+                                                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                                                    {roommate.name} ({roommate.rollNo})
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="text-gray-500">No roommates (Single room)</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-yellow-50 p-4 rounded-lg">
-                                        <p className="text-yellow-700">You haven't registered for a hostel yet</p>
-                                        <Button
-                                            text="Register Now"
-                                            onClick={() => navigate('/hostels')}
-                                            className="mt-2"
-                                        />
+                                    <div className="bg-yellow-50 p-6 rounded-lg">
+                                        <p className="text-yellow-800">
+                                            Room allocation is pending. Please wait for the administration to complete the allocation process.
+                                        </p>
+                                        {!student?.preferredHostel && (
+                                            <Button
+                                                text="Register for Hostel"
+                                                onClick={() => navigate('/hostels')}
+                                                className="mt-4"
+                                            />
+                                        )}
                                     </div>
                                 )}
                             </div>
 
-                            <div className="bg-white p-6 rounded-xl shadow-md">
-                                <h2 className="text-xl font-bold mb-4">Your Hostel Registration</h2>
-                                {roommateGroup.length > 0 ? (
+                            {/* Group Details (Show only if not allocated and has group) */}
+                            {!allocation?.allocated && roommateGroup.length > 0 && (
+                                <div className="bg-white rounded-xl shadow-md p-6">
+                                    <h2 className="text-xl font-semibold mb-4">Your Roommate Group</h2>
                                     <div className="space-y-4">
-                                        <p className="text-green-600">Group Registration Status</p>
-
+                                        {hostelName && (
+                                            <p className="text-blue-600">
+                                                Preferred Hostel: {hostelName}
+                                            </p>
+                                        )}
                                         <div className="space-y-2">
-                                            <h3 className="font-medium">Group Members:</h3>
                                             {roommateGroup.map((member) => (
-                                                <div key={member.rollNo} className="flex items-center justify-between">
+                                                <div key={member.rollNo}
+                                                    className="flex items-center justify-between p-3 bg-gray-50 rounded">
                                                     <div>
-                                                        <p>{member.name}</p>
+                                                        <p className="font-medium">{member.name}</p>
                                                         <p className="text-sm text-gray-600">{member.rollNo}</p>
                                                     </div>
-                                                    {member.isLeader ? (
+                                                    {member.isLeader && (
                                                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                                             Leader
                                                         </span>
-                                                    ) : student?.isLeader && (
-                                                        <button
-                                                            onClick={() => handleRemoveFromGroup(member.rollNo)}
-                                                            className="text-sm text-red-600 hover:text-red-800"
-                                                        >
-                                                            Remove from group
-                                                        </button>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
+                                        {!student?.isLeader && (
+                                            <Button
+                                                text="Leave Group"
+                                                onClick={handleLeaveGroup}
+                                                className="mt-4 bg-red-500 hover:bg-red-600"
+                                            />
+                                        )}
                                     </div>
-                                ) : (
-                                    <p className="text-yellow-600">No group registration found</p>
-                                )}
-                            </div>
-                            <button
-                                onClick={handleLeaveGroup}
-                                className="bg-red-500 text-white px-4 py-2 rounded"
-                            >
-                                Leave Group
-                            </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

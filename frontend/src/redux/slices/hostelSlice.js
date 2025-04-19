@@ -4,14 +4,12 @@ import api from "../../utils/api";
 export const fetchHostels = createAsyncThunk(
   "hostels/fetchHostels",
   async (collegeId, { rejectWithValue }) => {
-    try {
-      if (!collegeId) {
-        throw new Error("College ID is required");
-      }
+    if (!collegeId) {
+      return rejectWithValue("College ID is required");
+    }
 
-      console.log("[fetchHostels] Making API call with collegeId:", collegeId);
+    try {
       const response = await api.get(`/hostels/college/${collegeId}`);
-      console.log("[fetchHostels] API response:", response.data);
 
       if (!response.data || !Array.isArray(response.data)) {
         throw new Error("Invalid response format");
@@ -19,7 +17,6 @@ export const fetchHostels = createAsyncThunk(
 
       return response.data;
     } catch (error) {
-      console.error("[fetchHostels] Error:", error);
       return rejectWithValue(
         error.response?.data?.message ||
           error.message ||

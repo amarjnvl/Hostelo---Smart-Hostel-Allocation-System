@@ -28,8 +28,7 @@ export const fetchProfile = createAsyncThunk(
   "student/fetchProfile",
   async (rollNo) => {
     const res = await getProfileAPI(rollNo);
-    console.log("Fetched profile:", res);
-    return res;
+    return res.data;
   }
 );
 

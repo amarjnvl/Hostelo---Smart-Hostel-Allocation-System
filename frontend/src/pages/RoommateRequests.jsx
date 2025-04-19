@@ -21,10 +21,10 @@ const RoommateRequest = () => {
 
   // Fetch hostel details and existing roommate requests on mount
   useEffect(() => {
-    if (!hostelId) {
-      navigate("/hostels");
-      return;
-    }
+    // if (!hostelId) {
+    //   navigate("/hostels");
+    //   return;
+    // }
 
     const fetchHostelDetails = async () => {
       try {

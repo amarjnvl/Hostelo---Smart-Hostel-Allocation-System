@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Button from '../components/Button';
@@ -11,8 +11,13 @@ const Request = () => {
     const [statusMsg, setStatusMsg] = useState('');
     const [roommateGroup, setRoommateGroup] = useState([]);
     const [hostelName, setHostelName] = useState('');
+    const [friendRollNo, setFriendRollNo] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState('');
     const { student } = useSelector((state) => state.student);
     const navigate = useNavigate();
+    const location = useLocation();
+    const hostelId = new URLSearchParams(location.search).get('hostelId');
 
     useEffect(() => {
         const fetchGroupAndHostelDetails = async () => {
@@ -42,12 +47,50 @@ const Request = () => {
         fetchGroupAndHostelDetails();
     }, [student?.groupId]);
 
+    const sendOtp = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.post('/roommates/send-otp', {
+                toRoll: friendRollNo,
+                hostelId
+            });
+            setOtpSent(true);
+            setStatusMsg('OTP sent successfully! Ask your friend for the code.');
+        } catch (err) {
+            console.log(err.response?.data?.message || 'Failed to send OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const verifyOtp = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.post('/roommates/verify-otp', {
+                toRoll: friendRollNo,
+                otp,
+                hostelId
+            });
+            // setStatusMsg('Roommate verified successfully!');
+            setFriendRollNo('');
+            setOtp('');
+            setOtpSent(false);
+            fetchGroupAndHostelDetails();
+        } catch (err) {
+            console.log(err.response?.data?.message || 'Failed to send OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleRemoveFromGroup = async (rollNo) => {
         try {
             setLoading(true);
             const response = await api.post('/students/remove-from-group', { rollNo });
             if (response.data.success) {
-                fetchGroupAndHostelDetails(); // Just refresh the current page
+                fetchGroupAndHostelDetails();
                 setStatusMsg('Member removed successfully');
             }
         } catch (err) {
@@ -62,7 +105,6 @@ const Request = () => {
             setLoading(true);
             const response = await api.post('/students/leave-group');
             if (response.data.success) {
-                // Instead of navigating, just clear the group data
                 setRoommateGroup([]);
                 setHostelName('');
                 setStatusMsg('Successfully left the group');
@@ -79,71 +121,62 @@ const Request = () => {
             <Sidebar />
             <div className="flex-1 p-6 md:p-10">
                 <div className="max-w-4xl mx-auto space-y-6">
-                    {/* Hostel Registration Status */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold mb-4">Your Hostel Registration</h2>
-                        {student?.hostelChoice ? (
-                            <>
-                                <p className="text-green-600 mb-2">You are registered for hostel allocation</p>
-                                <p>Preferred Hostel: {hostelName || 'Not selected'}</p>
-                            </>
-                        ) : (
-                            <p className="text-yellow-600">You haven't registered for hostel allocation yet</p>
-                        )}
-                    </div>
-
-                    {/* Current Roommate Group */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <h2 className="text-xl font-bold mb-4">Your Roommate Group</h2>
-                        {roommateGroup.length > 0 ? (
+                    {hostelId && (
+                        <div className="bg-white p-6 rounded-xl shadow-md">
+                            <h2 className="text-xl font-bold mb-4">Add Roommate</h2>
                             <div className="space-y-4">
-                                {roommateGroup.map((member) => (
-                                    <div key={member.rollNo} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p className="font-medium">{member.name}</p>
-                                            <p className="text-sm text-gray-600">{member.rollNo}</p>
-                                        </div>
-                                        {member.isLeader ? (
-                                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                Leader
-                                            </span>
-                                        ) : student?.isLeader && (
-                                            <button
-                                                onClick={() => handleRemoveFromGroup(member.rollNo)}
-                                                className="text-sm text-red-600 hover:text-red-800"
-                                            >
-                                                Remove from group
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                                {!student?.isLeader && (
-                                    <Button
-                                        text="Leave Group"
-                                        onClick={handleLeaveGroup}
-                                        className="mt-4 bg-red-500 hover:bg-red-600"
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Friend's Roll Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={friendRollNo}
+                                        onChange={(e) => setFriendRollNo(e.target.value)}
+                                        className="w-full px-4 py-2 border rounded-md"
+                                        placeholder="Enter friend's roll number"
+                                        disabled={otpSent}
                                     />
+                                </div>
+
+                                {!otpSent ? (
+                                    <Button
+                                        text="Send OTP"
+                                        onClick={sendOtp}
+                                        loading={loading}
+                                        disabled={!friendRollNo || loading}
+                                    />
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Enter OTP
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={otp}
+                                                onChange={(e) => setOtp(e.target.value)}
+                                                className="w-full px-4 py-2 border rounded-md"
+                                                placeholder="Enter the OTP"
+                                            />
+                                        </div>
+                                        <Button
+                                            text="Verify OTP"
+                                            onClick={verifyOtp}
+                                            loading={loading}
+                                            disabled={!otp || loading}
+                                        />
+                                    </>
                                 )}
                             </div>
-                        ) : (
-                            <div className="text-center p-4">
-                                <p className="text-yellow-600 mb-4">You haven't formed a roommate group yet</p>
-                                <Button
-                                    text="Find Roommates"
-                                    onClick={() => navigate('/requests')}
-                                    className="bg-blue-500 hover:bg-blue-600"
-                                />
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    {statusMsg && (
-                        <p className={`mt-4 text-sm ${statusMsg.toLowerCase().includes('error') ||
-                                statusMsg.toLowerCase().includes('failed')
-                                ? 'text-red-600'
-                                : 'text-green-600'
-                            }`}>
-                            {statusMsg}
+
+
+                    {(error || statusMsg) && (
+                        <p className={`mt-4 text-sm ${error ? 'text-red-600' : 'text-green-600'}`}>
+                            {error || statusMsg}
                         </p>
                     )}
                 </div>
