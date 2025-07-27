@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../redux/slices/studentSlice';
-import logo from '../assets/Images/logo.png';
 import {
     MdDashboard,
     MdPerson,
@@ -10,14 +9,15 @@ import {
     MdMessage,
     MdMenu,
     MdClose,
-    MdLogout, // Add this import
+    MdLogout,
+    MdBusiness,
 } from 'react-icons/md';
 
 const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: MdDashboard },
     { name: 'Profile', path: '/', icon: MdPerson },
-    { name: 'Hostels', path: '/hostels', icon: MdApartment },
-    { name: 'Requests', path: '/requests', icon: MdMessage },
+    { name: 'Accommodations', path: '/hostels', icon: MdApartment },
+    { name: 'Roommate Requests', path: '/requests', icon: MdMessage },
 ];
 
 const getNavLinkClass = ({ isActive }) =>
@@ -64,13 +64,17 @@ const Sidebar = () => {
                     <Link
                         to="/"
                         onClick={closeSidebar}
-                        className="inline-block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full group"
+                        className="inline-block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg group"
                     >
-                        <img
-                            src={logo}
-                            alt="Logo"
-                            className="w-32 object-contain transition-transform duration-300 rounded-full group-hover:scale-105 group-hover:drop-shadow-md"
-                        />
+                        <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
+                                <MdBusiness className="w-8 h-8 text-white" />
+                            </div>
+                            <div className="text-left">
+                                <h1 className="text-xl font-bold text-gray-800">ResidenceHub</h1>
+                                <p className="text-xs text-gray-600">Student Housing Portal</p>
+                            </div>
+                        </div>
                     </Link>
                 </div>
 
