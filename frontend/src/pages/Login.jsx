@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendOtp, verifyOtp } from "../redux/slices/studentSlice";
 import { useNavigate, Navigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mail, ArrowRight, Loader2, ShieldCheck, School } from "lucide-react";
+import GlassCard from "../components/ui/GlassCard";
 
 const Login = () => {
     const [rollNo, setRollNo] = useState("");
@@ -15,13 +18,13 @@ const Login = () => {
     // Check if already authenticated
     const token = localStorage.getItem('token');
     if (token) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/dashboard" replace />;
     }
 
     const handleOtpSend = async (e) => {
         e.preventDefault();
         if (!rollNo) {
-            setError("Please enter roll number");
+            setError("Please enter your Roll Number");
             return;
         }
 
@@ -30,14 +33,14 @@ const Login = () => {
             await dispatch(sendOtp(rollNo)).unwrap();
             setIsOtpSent(true);
         } catch (err) {
-            setError(err.message || "Failed to send OTP");
+            setError(err.message || "Failed to send OTP. Check Roll No.");
         }
     };
 
     const handleOtpVerify = async (e) => {
         e.preventDefault();
         if (!rollNo || !otp) {
-            setError("Please enter both roll number and OTP");
+            setError("Please enter both Roll Number and OTP");
             return;
         }
 
@@ -47,114 +50,135 @@ const Login = () => {
             if (response.token) {
                 localStorage.setItem("token", response.token);
                 localStorage.setItem("rollNo", rollNo);
-                navigate('/', { replace: true });
+                navigate('/dashboard', { replace: true });
             }
         } catch (err) {
-            setError(err.message || "Verification failed");
+            setError(err.message || "Invalid OTP. Please try again.");
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                <div className="text-center">
-                    <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-                        <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
-                        </svg>
-                    </div>
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-                        ResidenceHub Portal
-                    </h2>
-                    <p className="text-gray-600">Sign in to access your student housing account</p>
-                </div>
-                <div className="bg-white py-8 px-6 shadow-xl rounded-xl">
-                    <form className="space-y-6">
-                        <div>
-                            <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700 mb-2">
-                                Student ID
-                            </label>
-                            <input
-                                id="rollNo"
-                                type="text"
-                                required
-                                value={rollNo}
-                                onChange={(e) => setRollNo(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                placeholder="Enter your student ID"
-                                disabled={isOtpSent}
-                            />
-                        </div>
-                        {isOtpSent && (
-                            <div>
-                                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Verification Code
-                                </label>
-                                <input
-                                    id="otp"
-                                    type="text"
-                                    required
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                    placeholder="Enter the 6-digit code"
-                                />
-                                <p className="mt-2 text-sm text-gray-600">
-                                    Check your email for the verification code
-                                </p>
-                            </div>
-                        )}
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background elements are handled by body style in index.css, adding overlay here */}
+            <div className="absolute inset-0 bg-academic-navy/40 backdrop-blur-[2px] z-0" />
 
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <p className="text-sm">{error}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+            <GlassCard className="w-full max-w-md relative z-10 !p-8 border-white/10 shadow-2xl shadow-black/50">
+                <div className="text-center mb-10">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="w-16 h-16 bg-gradient-to-tr from-electric-blue to-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-500/30"
+                    >
+                        <School className="text-white w-8 h-8" />
+                    </motion.div>
 
-                        <button
-                            type="submit"
-                            onClick={isOtpSent ? handleOtpVerify : handleOtpSend}
-                            disabled={loading}
-                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {loading && (
-                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V8l4 4-4 4V8a8 8 0 11-8 8z"></path>
-                                </svg>
-                            )}
-                            {loading ? (
-                                "Processing..."
-                            ) : isOtpSent ? (
-                                "Verify Code & Sign In"
-                            ) : (
-                                "Send Verification Code"
-                            )}
-                        </button>
-                    </form>
-                </div>
-                
-                <div className="text-center">
-                    <p className="text-sm text-gray-600">
-                        Need help? Contact{' '}
-                        <a href="mailto:housing@university.edu" className="font-medium text-blue-600 hover:text-blue-500">
-                            housing support
-                        </a>
+                    <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+                        Hostelo <span className="text-electric-blue">Enterprise</span>
+                    </h1>
+                    <p className="text-slate-400 text-sm font-light">
+                        NIT Trichy Hostels • Secure Access
                     </p>
                 </div>
+
+                <AnimatePresence mode="wait">
+                    {!isOtpSent ? (
+                        <motion.form
+                            key="roll-form"
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -20, opacity: 0 }}
+                            className="space-y-6"
+                            onSubmit={handleOtpSend}
+                        >
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider ml-1">Roll Number</label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        value={rollNo}
+                                        onChange={(e) => setRollNo(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-slate-500 focus:outline-none focus:border-electric-blue/50 focus:bg-white/10 transition-all font-mono"
+                                        placeholder="Enter your student ID"
+                                    />
+                                    <Mail className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5 group-focus-within:text-electric-blue transition-colors" />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-electric-blue hover:bg-sky-400 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 group"
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : "Send Secure OTP"}
+                                {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
+                            </button>
+                        </motion.form>
+                    ) : (
+                        <motion.form
+                            key="otp-form"
+                            initial={{ x: 20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 20, opacity: 0 }}
+                            className="space-y-6"
+                            onSubmit={handleOtpVerify}
+                        >
+                            <div className="text-center mb-6">
+                                <p className="text-slate-300 text-sm">
+                                    We sent a code to your registered email <br />
+                                    <span className="text-electric-blue font-mono">@{rollNo}@example.com</span>
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider ml-1">One-Time Password</label>
+                                <div className="relative group">
+                                    <input
+                                        type="text"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pl-11 text-white placeholder-slate-500 focus:outline-none focus:border-electric-blue/50 focus:bg-white/10 transition-all font-mono tracking-widest text-lg"
+                                        placeholder="• • • • • •"
+                                        autoFocus
+                                    />
+                                    <ShieldCheck className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5 group-focus-within:text-electric-blue transition-colors" />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-nitt-gold hover:bg-yellow-400 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2"
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : "Verify & Login"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsOtpSent(false)}
+                                className="w-full text-sm text-slate-400 hover:text-white transition-colors"
+                            >
+                                ← Back to Roll Number
+                            </button>
+                        </motion.form>
+                    )}
+                </AnimatePresence>
+
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-200 text-sm text-center"
+                    >
+                        {error}
+                    </motion.div>
+                )}
+            </GlassCard>
+
+            <div className="absolute bottom-6 text-slate-500 text-xs text-center w-full z-10">
+                &copy; 2025 Hostelo Inc. | Authorized Access Only
             </div>
         </div>
     );
 };
 
 export default Login;
-

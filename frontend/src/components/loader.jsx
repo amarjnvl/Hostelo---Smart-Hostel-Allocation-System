@@ -1,11 +1,18 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 const Loader = () => {
     return (
         <div className="flex items-center justify-center">
-            <div className="spinner-border animate-spin inline-block w-8 h-8 border-b-2 border-blue-500 rounded-full" role="status">
-                <span className="visually-hidden">Loading...</span>
-            </div>
+            <motion.div
+                role="status"
+                initial={{ rotate: 0 }}
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
+                className="inline-block w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
+            >
+                <span className="sr-only">Loading...</span>
+            </motion.div>
         </div>
     );
 };

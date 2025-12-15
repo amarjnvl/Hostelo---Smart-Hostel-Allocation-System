@@ -1,139 +1,87 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MdPerson } from 'react-icons/md';
-import Sidebar from '../components/Sidebar';
-import Button from '../components/Button';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProfile } from '../redux/slices/studentSlice';
+import { User, Mail, Hash, Building2 } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import GlassCard from '../components/ui/GlassCard';
 
 const Profile = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { student, loading, error } = useSelector((state) => state.student);
 
-  // Fetch the student data from Redux store
-  const { student, loading, error, pendingGroupRequest } = useSelector((state) => state.student);
-
-  // Fetch profile if student data is not available yet
   useEffect(() => {
     if (student === null) {
-      console.log('[Profile] No student data found, fetching profile');
       const rollNo = localStorage.getItem('rollNo');
-      console.log('[Profile] rollNo found:', rollNo);
       if (rollNo) {
         dispatch(fetchProfile(rollNo));
       }
     }
   }, [dispatch, student]);
 
-  // If profile is still loading, show a loading state
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-electric-blue">Loading Profile...</div>;
   }
 
-  // If there is an error, show an error message
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="min-h-screen flex items-center justify-center text-red-400">Error: {error}</div>;
   }
 
-  // If no student data, handle accordingly (e.g., redirect or show message)
-  if (!student) {
-    return <div>No profile data found</div>;
+  if (!student && !loading) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('rollNo');
+    return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="flex min-h-screen bg-blue-50">
+    <div className="flex min-h-screen">
       <Sidebar />
+      <main className="flex-1 p-8 overflow-y-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-text-main">Student Profile</h1>
+          <p className="text-text-muted">Your account details</p>
+        </header>
 
-      <div className="flex-1 p-6 md:p-10">
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Student Profile</h1>
-            <p className="text-gray-600">Manage your personal information and housing preferences</p>
+        <GlassCard className="max-w-2xl mx-auto">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-electric-blue to-blue-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
+              <User size={48} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-text-main">{student?.name}</h2>
+            <span className="text-sm px-3 py-1 rounded-full bg-nitt-gold/20 text-nitt-gold border border-nitt-gold/30 mt-2">
+              Year {student?.year}
+            </span>
           </div>
 
-          <div className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
-            {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-              <div className="flex items-center">
-                <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-6">
-                  <MdPerson size={40} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{student.name}</h2>
-                  <p className="text-blue-100">Student ID: {student.rollNo}</p>
-                </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="p-4 bg-glass-bg rounded-xl border border-glass-border">
+              <div className="flex items-center gap-3 text-text-muted mb-1">
+                <Mail size={16} /> Email
               </div>
+              <p className="text-text-main font-medium">{student?.email}</p>
             </div>
-
-            {/* Content Section */}
-            <div className="p-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                      <p className="text-gray-800">{student.email}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                      <p className="text-gray-800">{student.rollNo}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                      <p className="text-gray-800 capitalize">{student.gender}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Registration Status</label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        student.isRegistered 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {student.isRegistered ? 'Registered' : 'Pending Registration'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            <div className="p-4 bg-glass-bg rounded-xl border border-glass-border">
+              <div className="flex items-center gap-3 text-text-muted mb-1">
+                <Hash size={16} /> Roll Number
               </div>
-
-              {/* Action Buttons */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    text="Manage Housing Preferences"
-                    onClick={() => {
-                      console.log('[Profile] Navigating to Housing Management');
-                      navigate('/hostels');
-                    }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  />
-                  {pendingGroupRequest && (
-                    <Button
-                      text="View Pending Requests"
-                      onClick={() => {
-                        console.log('[Profile] Navigating to Roommate Requests');
-                        navigate('/requests');
-                      }}
-                      className="flex-1 bg-orange-600 hover:bg-orange-700"
-                    />
-                  )}
-                </div>
-              </div>
+              <p className="text-text-main font-medium font-mono">{student?.rollNo}</p>
             </div>
           </div>
-        </div>
-      </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => navigate('/hostels')}
+              className="px-8 py-3 bg-electric-blue hover:bg-sky-400 text-slate-900 font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 inline-flex items-center gap-2"
+            >
+              <Building2 size={18} />
+              Go to Hostel Allotment
+            </button>
+          </div>
+        </GlassCard>
+      </main>
     </div>
   );
 };
 
 export default Profile;
-

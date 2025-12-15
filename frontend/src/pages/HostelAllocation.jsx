@@ -1,252 +1,165 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
-import Button from '../components/Button';
+import { fetchProfile } from '../redux/slices/studentSlice';
+import GlassCard from '../components/ui/GlassCard';
+import { Users, User, ArrowRight, Loader2 } from 'lucide-react';
 
 const HostelAllocation = () => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [groupDetails, setGroupDetails] = useState(null);
-  const [statusMsg, setStatusMsg] = useState('');
   const [roommatePreference, setRoommatePreference] = useState(0);
   const { student } = useSelector((state) => state.student);
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
 
+  const searchParams = new URLSearchParams(location.search);
+  const hostelId = searchParams.get('hostelId');
+  const capacity = parseInt(searchParams.get('capacity') || '1');
+
+  // If no hostelId, redirect back
   useEffect(() => {
-    
-    const fetchAllocationDetails = async () => {
-      console.log('[HostelAllocation] Fetching allocation details...');
-      try {
-        setLoading(true);
-        if (!student?.groupId) {
-          // If not in a group, check if they have roommate preferences saved
-          if (student?.roommatePreference?.desiredCount !== undefined) {
-            setRoommatePreference(student.roommatePreference.desiredCount);
-          }
-          setLoading(false);
-          return;
-        }
+    if (!hostelId) {
+      navigate('/hostels');
+    }
+  }, [hostelId, navigate]);
 
-        const response = await api.get(`/students/group/${student.groupId}`);
-        if (response.data.success) {
-          // Get hostel details for the group
-          const groupData = response.data.data;
-          const hostelId = groupData[0]?.groupHostelChoice;
-
-          if (hostelId) {
-            const hostelResponse = await api.get(`/hostels/${hostelId}`);
-            if (hostelResponse.data.success) {
-              setGroupDetails({
-                members: groupData,
-                hostelName: hostelResponse.data.data.name,
-                hostelId: hostelId,
-                capacity: hostelResponse.data.data.roomCapacity
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[HostelAllocation] Error fetching allocation details:', err);
-        setError(err.response?.data?.message || 'Failed to fetch allocation details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllocationDetails();
-  }, [student]);
-
-  const handleAddRoommates = () => {
-    console.log('[HostelAllocation] Adding more roommates...');
-    navigate('/requests');
-  };
-
-  const handleRoommatePreferenceChange = async (count) => {
-    console.log('[HostelAllocation] Saving roommate preference...');
+  const handleConfirm = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/students/roommate-preference', {
-        desiredCount: count
+      setError(null);
+
+      // 1. Set Preference
+      await api.post('/students/roommate-preference', {
+        desiredCount: roommatePreference
       });
 
-      if (response.data.success) {
-        setRoommatePreference(count);
-        setStatusMsg('Roommate preference saved successfully');
+      // 2. Register for Hostel
+      const regResponse = await api.post('/students/register', { hostelId });
 
-        // Redirect to requests page if the user wants roommates
-        if (count > 0) {
-          console.log('[HostelAllocation] Redirecting to requests page...');
-          navigate('/requests');
-        }
+      // 3. Update Profile State
+      if (student?.rollNo) {
+        dispatch(fetchProfile(student.rollNo));
       }
+
+      // 4. Navigate
+      if (roommatePreference > 0) {
+        // Go to requests page to add friends
+        navigate(`/requests?hostelId=${hostelId}`);
+      } else {
+        navigate('/dashboard');
+      }
+
     } catch (err) {
-      console.error('[HostelAllocation] Error saving roommate preference:', err);
-      setError(err.response?.data?.message || 'Failed to save roommate preference');
+      console.error('Registration failed:', err);
+      setError(err.response?.data?.message || 'Failed to complete registration');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
-
-  if (groupDetails && groupDetails.members.length >= groupDetails.capacity) {
-    return (
-      <div>
-        <h2 className="text-xl font-bold mb-3 text-gray-800">
-          You have registered for the maximum group capacity!
-        </h2>
-        <p>Your group members:</p>
-        <ul>
-          {groupDetails.members.map((member) => (
-            <li key={member._id}>
-              {member.name} ({member.rollNo})
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen bg-blue-50">
+    <div className="flex min-h-screen bg-academic-navy">
       <Sidebar />
-      <div className="flex-1 p-6 md:p-10">
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-md">
-          <h1 className="text-2xl font-bold mb-6">Hostel Allocation</h1>
-
-          {groupDetails ? (
-            <div className="space-y-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h2 className="font-semibold text-lg text-blue-800 mb-4">
-                  Registered Group Members
-                </h2>
-                <p className="text-blue-700 mb-2">
-                  Preferred Hostel: {groupDetails.hostelName}
-                </p>
-                <p className="text-blue-700 mb-4">
-                  Room Capacity: {groupDetails.capacity} students per room
-                </p>
-
-                <div className="space-y-4">
-                  {groupDetails.members.map((member) => (
-                    <div
-                      key={member.rollNo}
-                      className="bg-white p-4 rounded-lg shadow-sm"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">Name: {member.name}</p>
-                          <p className="text-gray-600">Roll No: {member.rollNo}</p>
-                        </div>
-                        {member.isLeader && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Leader
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add more roommates button if not at capacity */}
-                {student?.isLeader && groupDetails.members.length < groupDetails.capacity && (
-                  <div className="mt-6">
-                    <Button
-                      text="Add More Roommates"
-                      onClick={handleAddRoommates}
-                      className="bg-blue-500 hover:bg-blue-600"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            // No group allocation registered yet
-            <div className="space-y-6">
-              <div className="bg-blue-50 p-6 rounded-lg">
-                <h2 className="font-semibold text-lg text-blue-800 mb-4">
-                  Roommate Preference
-                </h2>
-                <p className="mb-4">
-                  Do you want to share your room with friends?
-                </p>
-
-                <div className="space-y-3">
-                  <div
-                    onClick={() => handleRoommatePreferenceChange(0)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${roommatePreference === 0
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-blue-300"
-                      }`}
-                  >
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${roommatePreference === 0 ? "border-blue-500" : "border-gray-300"
-                        }`}>
-                        {roommatePreference === 0 && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
-                      </div>
-                      <div>
-                        <p className="font-medium">No, I want a room for myself</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleRoommatePreferenceChange(1)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${roommatePreference === 1
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-blue-300"
-                      }`}
-                  >
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${roommatePreference === 1 ? "border-blue-500" : "border-gray-300"
-                        }`}>
-                        {roommatePreference === 1 && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
-                      </div>
-                      <div>
-                        <p className="font-medium">Yes, I want to share with 1 friend</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleRoommatePreferenceChange(2)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${roommatePreference === 2
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-blue-300"
-                      }`}
-                  >
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${roommatePreference === 2 ? "border-blue-500" : "border-gray-300"
-                        }`}>
-                        {roommatePreference === 2 && <div className="w-3 h-3 bg-blue-500 rounded-full"></div>}
-                      </div>
-                      <div>
-                        <p className="font-medium">Yes, I want to share with 2 friends</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {statusMsg && (
-            <p className={`mt-4 text-sm ${statusMsg.toLowerCase().includes('error') ||
-              statusMsg.toLowerCase().includes('failed')
-              ? 'text-red-600'
-              : 'text-green-600'
-              }`}>
-              {statusMsg}
+      <div className="flex-1 p-6 md:p-10 flex items-center justify-center">
+        <GlassCard className="max-w-2xl w-full p-8">
+          <header className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-white mb-2">Roommate Preferences</h1>
+            <p className="text-slate-400">
+              This room has a capacity of <span className="text-electric-blue font-bold">{capacity}</span>.
+              How would you like to proceed?
             </p>
+          </header>
+
+          <div className="space-y-4 mb-8">
+            <div
+              onClick={() => setRoommatePreference(0)}
+              className={`p-6 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${roommatePreference === 0
+                  ? 'bg-electric-blue/20 border-electric-blue shadow-lg shadow-electric-blue/10'
+                  : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+                }`}
+            >
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${roommatePreference === 0 ? 'border-electric-blue' : 'border-slate-500'
+                }`}>
+                {roommatePreference === 0 && <div className="w-3 h-3 bg-electric-blue rounded-full" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <User size={20} /> Solo / Random
+                </h3>
+                <p className="text-sm text-slate-400">
+                  I don't have a group. Allocate me a room randomly or with random roommates.
+                </p>
+              </div>
+            </div>
+
+            {capacity > 1 && (
+              <div
+                onClick={() => setRoommatePreference(1)}
+                className={`p-6 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${roommatePreference === 1
+                    ? 'bg-electric-blue/20 border-electric-blue shadow-lg shadow-electric-blue/10'
+                    : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+                  }`}
+              >
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${roommatePreference === 1 ? 'border-electric-blue' : 'border-slate-500'
+                  }`}>
+                  {roommatePreference === 1 && <div className="w-3 h-3 bg-electric-blue rounded-full" />}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users size={20} /> I have 1 friend
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Create a group for me and 1 friend.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {capacity > 2 && (
+              <div
+                onClick={() => setRoommatePreference(2)}
+                className={`p-6 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${roommatePreference === 2
+                    ? 'bg-electric-blue/20 border-electric-blue shadow-lg shadow-electric-blue/10'
+                    : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+                  }`}
+              >
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${roommatePreference === 2 ? 'border-electric-blue' : 'border-slate-500'
+                  }`}>
+                  {roommatePreference === 2 && <div className="w-3 h-3 bg-electric-blue rounded-full" />}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users size={20} /> I have 2 friends
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Create a group for me and 2 friends.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 text-red-200 rounded-xl text-center">
+              {error}
+            </div>
           )}
-        </div>
+
+          <button
+            onClick={handleConfirm}
+            disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-electric-blue to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-lg"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : 'Confirm & Register'} <ArrowRight size={20} />
+          </button>
+        </GlassCard>
       </div>
     </div>
   );
 };
 
 export default HostelAllocation;
-

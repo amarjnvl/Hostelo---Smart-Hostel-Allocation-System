@@ -23,8 +23,10 @@ router.get("/", adminProtect, getAllStudents);
 router.get("/profile/:rollNo", getStudentByRollNo);
 router.put("/:studentId", updateStudent);
 
+const { checkYearConstraint } = require("../middleware/allocationMiddleware");
+
 // Hostel registration routes
-router.post("/register", registerForHostel);
+router.post("/register", checkYearConstraint, registerForHostel);
 router.post("/roommate-preference", setRoommatePreference);
 router.get("/group/:groupId", getStudentGroup);
 

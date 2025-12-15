@@ -6,7 +6,6 @@ const { buildMutualGroups } = require("../utils/groupGraph");
 const Student = require("../models/Student");
 const College = require("../models/College");
 
-
 exports.allocateRooms = async (req, res) => {
   console.log("[allocateRooms] Starting room allocation process...");
   try {
@@ -123,12 +122,12 @@ exports.allocateRooms = async (req, res) => {
             results.success.push({
               type: "group",
               size: item.data.length,
-              students: item.data.map(student => ({
+              students: item.data.map((student) => ({
                 name: student.name,
-                rollNo: student.rollNo
+                rollNo: student.rollNo,
               })),
               roomNumber: allocation.room.roomNumber,
-              hostelName: allocation.room.hostel.name
+              hostelName: allocation.room.hostel.name,
             });
             console.log("[allocateRooms] Group allocation successful");
           } else {
@@ -140,53 +139,62 @@ exports.allocateRooms = async (req, res) => {
           try {
             // Handle single student allocation
             if (!item.data.isAllocated) {
-              console.log(`[allocateRooms] Processing single allocation for student ${item.data.rollNo}`);
-              
+              console.log(
+                `[allocateRooms] Processing single allocation for student ${item.data.rollNo}`
+              );
+
               // Validate student registration
               if (!item.data.isRegistered) {
-                throw new Error('Student is not registered for allocation');
+                throw new Error("Student is not registered for allocation");
               }
-        
+
               // Attempt allocation
               const allocation = await allocateRoomForStudent(item.data);
-              
+
               if (!allocation) {
-                throw new Error('Room allocation failed');
+                throw new Error("Room allocation failed");
               }
-        
+
               // Add successful allocation to results
               results.success.push({
                 type: "single",
                 student: {
                   name: item.data.name,
-                  rollNo: item.data.rollNo
+                  rollNo: item.data.rollNo,
                 },
                 roomNumber: allocation.room.number,
                 hostelName: allocation.room.hostel.name,
-                allocatedAt: new Date()
+                allocatedAt: new Date(),
               });
-        
-              console.log(`[allocateRooms] Successfully allocated room ${allocation.room.number} in ${allocation.room.hostel.name}`);
+
+              console.log(
+                `[allocateRooms] Successfully allocated room ${allocation.room.number} in ${allocation.room.hostel.name}`
+              );
             } else {
-              console.log(`[allocateRooms] Skipping student ${item.data.rollNo} - already allocated`);
+              console.log(
+                `[allocateRooms] Skipping student ${item.data.rollNo} - already allocated`
+              );
               results.skipped.push({
                 type: "single",
                 student: {
                   name: item.data.name,
-                  rollNo: item.data.rollNo
+                  rollNo: item.data.rollNo,
                 },
-                reason: "Already allocated"
+                reason: "Already allocated",
               });
             }
           } catch (error) {
-            console.error(`[allocateRooms] Failed to allocate room for student ${item.data.rollNo}:`, error);
+            console.error(
+              `[allocateRooms] Failed to allocate room for student ${item.data.rollNo}:`,
+              error
+            );
             results.failures.push({
               type: "single",
               student: {
                 name: item.data.name,
-                rollNo: item.data.rollNo
+                rollNo: item.data.rollNo,
               },
-              error: error.message
+              error: error.message,
             });
           }
         }
@@ -194,16 +202,17 @@ exports.allocateRooms = async (req, res) => {
         console.error(`[allocateRooms] Allocation failed:`, err);
         results.failures.push({
           type: item.type,
-          students: item.type === "group"
-            ? item.data.map(student => ({
-                name: student.name,
-                rollNo: student.rollNo
-              }))
-            : {
-                name: item.data.name,
-                rollNo: item.data.rollNo
-              },
-          error: err.message
+          students:
+            item.type === "group"
+              ? item.data.map((student) => ({
+                  name: student.name,
+                  rollNo: student.rollNo,
+                }))
+              : {
+                  name: item.data.name,
+                  rollNo: item.data.rollNo,
+                },
+          error: err.message,
         });
       }
     }

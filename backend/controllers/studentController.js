@@ -54,7 +54,7 @@ const updateStudent = async (req, res) => {
 const setRoommatePreference = async (req, res) => {
   try {
     const { desiredCount } = req.body;
-    const studentId = req.student.id;
+    const studentId = req.user.id;
 
     // Validate the desired count
     if (desiredCount < 0 || desiredCount > 2) {
@@ -112,6 +112,14 @@ const registerForHostel = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
+    }
+
+    // Check if limit is reached or already registered
+    if (student.isRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already registered for a hostel.",
+      });
     }
 
     // Check if student is already in a group
@@ -187,7 +195,7 @@ const getStudentGroup = async (req, res) => {
 const removeFromGroup = async (req, res) => {
   try {
     const { rollNo } = req.body;
-    const requestingStudent = await Student.findById(req.student.id);
+    const requestingStudent = await Student.findById(req.user.id);
 
     // Check if requesting student is a group leader
     if (!requestingStudent.isLeader) {
@@ -247,7 +255,7 @@ const removeFromGroup = async (req, res) => {
 // Leave group (for non-leaders)
 const leaveGroup = async (req, res) => {
   try {
-    const student = await Student.findById(req.student.id);
+    const student = await Student.findById(req.user.id);
 
     if (!student.groupId) {
       return res.status(400).json({

@@ -6,6 +6,7 @@ const studentSchema = new mongoose.Schema(
     rollNo: { type: String, required: true },
     email: { type: String, unique: true },
     gender: { type: String, enum: ["male", "female", "other"], required: true },
+    year: { type: Number, enum: [1, 2], required: true },
     college: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "College",

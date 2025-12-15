@@ -76,6 +76,11 @@ exports.sendRoommateRequest = async (req, res) => {
       return res.status(400).json({ message: "Roommate must be same gender" });
     }
 
+    if (fromStudent.year !== toStudent.year) {
+      console.log("[sendRoommateRequest] Year mismatch detected");
+      return res.status(400).json({ message: "Roommates must be from the same year" });
+    }
+
     if (fromStudent.isAllocated || toStudent.isAllocated) {
       return res.status(400).json({
         success: false,
@@ -268,6 +273,12 @@ exports.verifyRoommateOtp = async (req, res) => {
         .json({ message: "Roommate group must be same gender" });
     }
 
+    if (fromStudent.year !== toStudent.year) {
+      return res
+        .status(400)
+        .json({ message: "Roommates must be from the same year" });
+    }
+
     if (!fromStudent.college.equals(toStudent.college)) {
       return res
         .status(400)
@@ -424,3 +435,4 @@ exports.deleteRoommateRequest = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+

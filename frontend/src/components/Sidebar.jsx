@@ -2,28 +2,21 @@ import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logout } from '../redux/slices/studentSlice';
-import {
-    MdDashboard,
-    MdPerson,
-    MdApartment,
-    MdMessage,
-    MdMenu,
-    MdClose,
-    MdLogout,
-    MdBusiness,
-} from 'react-icons/md';
+import logo from '../assets/Images/logo.png';
+import { LayoutDashboard, User, Building2, MessageSquare, Menu, X, LogOut, Moon, Sun } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: MdDashboard },
-    { name: 'Profile', path: '/', icon: MdPerson },
-    { name: 'Accommodations', path: '/hostels', icon: MdApartment },
-    { name: 'Roommate Requests', path: '/requests', icon: MdMessage },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Profile', path: '/', icon: User },
+    { name: 'Hostels', path: '/hostels', icon: Building2 },
+    { name: 'Requests', path: '/requests', icon: MessageSquare },
 ];
 
 const getNavLinkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-300 ${isActive
-        ? 'bg-white text-blue-600 shadow-sm font-semibold'
-        : 'text-gray-600 hover:bg-gray-100'
+    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-300 ${isActive
+        ? 'bg-glass-bg/50 text-electric-blue font-semibold border border-glass-border shadow-lg'
+        : 'text-text-muted hover:text-text-main hover:bg-glass-bg/30'
     }`;
 
 const Sidebar = () => {
@@ -31,7 +24,6 @@ const Sidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    // functions 
     const toggleSidebar = () => setIsOpen(!isOpen);
     const closeSidebar = () => setIsOpen(false);
 
@@ -43,38 +35,29 @@ const Sidebar = () => {
     return (
         <div>
             {/* Mobile Toggle Button */}
-            <button className="md:hidden fixed top-5 left-4 z-50 bg-white p-2 rounded-md shadow-md"
+            <button className="md:hidden fixed top-5 left-4 z-50 glass p-2 rounded-xl"
                 onClick={toggleSidebar}
             >
-                {
-                    isOpen ?
-                        (<MdClose className="w-6 h-6 text-blue-600" />
-                        ) : (
-                            <MdMenu className="w-6 h-6 text-blue-600" />)
-                }
+                {isOpen ? <X className="w-6 h-6 text-electric-blue" /> : <Menu className="w-6 h-6 text-electric-blue" />}
             </button>
 
             {/* Sidebar Panel */}
             <div
-                className={`fixed top-0 left-0 z-40 h-screen w-64 bg-blue-50 border-r shadow-md flex flex-col transform transition-transform duration-300 ease-in-out rounded-tr-2xl rounded-br-2xl
+                className={`fixed top-0 left-0 z-40 h-screen w-64 bg-glass-bg backdrop-blur-xl border-r border-glass-border flex flex-col transform transition-transform duration-300 ease-in-out
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:relative`}
             >
                 {/* Logo Section */}
-                <div className="p-6 border-b flex justify-center items-center">
+                <div className="p-6 border-b border-glass-border flex justify-center items-center">
                     <Link
-                        to="/"
+                        to="/dashboard"
                         onClick={closeSidebar}
-                        className="inline-block focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg group"
+                        className="inline-block focus:outline-none rounded-full group"
                     >
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                                <MdBusiness className="w-8 h-8 text-white" />
-                            </div>
-                            <div className="text-left">
-                                <h1 className="text-xl font-bold text-gray-800">ResidenceHub</h1>
-                                <p className="text-xs text-gray-600">Student Housing Portal</p>
-                            </div>
-                        </div>
+                        <img
+                            src={logo}
+                            alt="Hostelo"
+                            className="w-24 object-contain transition-transform duration-300 rounded-full group-hover:scale-105"
+                        />
                     </Link>
                 </div>
 
@@ -93,13 +76,20 @@ const Sidebar = () => {
                     ))}
                 </nav>
 
-                {/* Logout Button */}
-                <div className="p-4 border-t">
+                {/* Bottom Section */}
+                <div className="p-4 border-t border-glass-border space-y-4">
+                    {/* Theme Toggle */}
+                    <div className="flex justify-between items-center px-4">
+                        <span className="text-sm font-medium text-text-muted">Theme</span>
+                        <ThemeToggle />
+                    </div>
+
+                    {/* Logout Button */}
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors duration-300"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-500/10 hover:border hover:border-red-500/20 transition-all font-medium"
                     >
-                        <MdLogout className="w-5 h-5" />
+                        <LogOut className="w-5 h-5" />
                         <span>Logout</span>
                     </button>
                 </div>
@@ -109,7 +99,7 @@ const Sidebar = () => {
             {isOpen && (
                 <div
                     onClick={closeSidebar}
-                    className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-30 z-30 md:hidden"
+                    className="fixed top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-30 md:hidden"
                 ></div>
             )}
         </div>

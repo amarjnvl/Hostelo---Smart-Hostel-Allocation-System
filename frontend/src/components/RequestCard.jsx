@@ -1,8 +1,13 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const RequestCard = ({ rollNo, status, onAccept, onReject }) => {
     return (
-        <div className="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4">
+        <motion.div
+            className="bg-white p-4 rounded-xl shadow border border-gray-200 mb-4"
+            whileHover={{ scale: 1.01 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+        >
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-base font-semibold text-gray-800">Roll No: {rollNo}</p>
@@ -26,7 +31,7 @@ const RequestCard = ({ rollNo, status, onAccept, onReject }) => {
                     </div>
                 )}
             </div>
-        </div>
+        </motion.div>
     );
 };
 

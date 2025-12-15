@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+@theme {
+  --color-academic-navy: #020617;
+  /* Static Dark for accents */
+  --color-electric-blue: #38bdf8;
+  --color-nitt-gold: #fbbf24;
+
+  /* Semantic Colors mapped to CSS Variables */
+  --color-bg-main: var(--color-bg-main);
+  --color-text-main: var(--color-text-main);
+  --color-text-muted: var(--color-text-muted);
+  --color-glass-bg: var(--color-glass-bg);
+  --color-glass-border: var(--color-glass-border);
+}
+
+:root {
+  /* Dark Mode (Default) */
+  --color-bg-main: #020617;
+  /* Slate 950 */
+  --color-text-main: #f1f5f9;
+  /* Slate 100 */
+  --color-text-muted: #94a3b8;
+  /* Slate 400 */
+  --color-glass-bg: rgba(255, 255, 255, 0.05);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --bg-gradient-1: rgba(56, 189, 248, 0.15);
+  --bg-gradient-2: rgba(251, 191, 36, 0.15);
+}
+
+:root[data-theme="light"] {
+  /* Light Mode */
+  --color-bg-main: #f8fafc;
+  /* Slate 50 */
+  --color-text-main: #0f172a;
+  /* Slate 900 */
+  --color-text-muted: #475569;
+  /* Slate 600 */
+  --color-glass-bg: rgba(255, 255, 255, 0.65);
+  /* More opaque for light mode */
+  --color-glass-border: rgba(0, 0, 0, 0.05);
+  --bg-gradient-1: rgba(56, 189, 248, 0.1);
+  --bg-gradient-2: rgba(251, 191, 36, 0.1);
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-glass-bg backdrop-blur-xl border border-glass-border shadow-xl transition-colors duration-300;
+  }
+
+  .glass-hover {
+    @apply hover:bg-glass-bg/80 hover:border-glass-border/50 hover:shadow-2xl transition-all duration-300;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  }
+}
+
+body {
+  @apply bg-bg-main text-text-main antialiased min-h-screen transition-colors duration-500 ease-in-out;
+  background-image:
+    radial-gradient(at 0% 0%, var(--bg-gradient-1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, var(--bg-gradient-2) 0px, transparent 50%);
+  background-attachment: fixed;
+}

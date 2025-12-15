@@ -4,15 +4,16 @@ import { fetchProfile } from "../redux/slices/studentSlice";
 import { fetchHostels } from "../redux/slices/hostelSlice";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import Button from "../components/Button";
 import api from "../utils/api";
+import GlassCard from "../components/ui/GlassCard";
+import { Building2, Bed, CheckCircle } from "lucide-react";
 
 const HostelList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [loadingSelect, setLoadingSelect] = useState(false);
 
-  const { student } = useSelector((state) => state.student);
+  const { student, loading: studentLoading } = useSelector((state) => state.student);
   const { hostels, loading, error } = useSelector((state) => state.hostels);
 
   useEffect(() => {
@@ -23,175 +24,132 @@ const HostelList = () => {
   }, [student, dispatch]);
 
   useEffect(() => {
-    if (student?.college) {
-      dispatch(fetchHostels(student.college));
+    const collegeId = student?.college?._id || student?.college;
+    if (collegeId) {
+      dispatch(fetchHostels(collegeId));
     }
   }, [student, dispatch]);
 
-  const handleHostelSelect = async (hostelId) => {
-    if (!hostelId) {
-      console.error("Hostel ID is undefined", hostelId);
-      return;
-    }
-
+  const handleHostelSelect = async (hostel) => {
     try {
-      setLoadingSelect(true);
-      await api.post("/students/register", {
-        hostelId: hostelId, // <-- send hostelId as required by backend
-      });
-
-      console.log("Hostel selected successfully", hostelId);
-
-      // 2. Ask if they want roommates
-      const wantsRoommate = window.confirm("Would you like to add roommates?");
-
-      if (wantsRoommate) {
-        navigate(`/requests?hostelId=${hostelId}`);
-      } else {
-        alert("You'll be allocated a room with random roommates later.");
-        navigate("/dashboard");
+      if (hostel.roomCapacity > 1) {
+        navigate(`/allocation?hostelId=${hostel._id}&capacity=${hostel.roomCapacity}`);
+        return;
       }
+
+      setLoadingSelect(true);
+      await api.post("/students/register", { hostelId: hostel._id });
+
+      // Update local profile state immediately
+      if (student?.rollNo) {
+        dispatch(fetchProfile(student.rollNo));
+      }
+      navigate("/dashboard");
     } catch (err) {
-      console.error(err.response?.data?.message || "An error occurred");
       alert(err.response?.data?.message || "An error occurred");
     } finally {
       setLoadingSelect(false);
     }
   };
 
+  // Debug: Log student and hostels data
+  useEffect(() => {
+    console.log('Student data:', student);
+    console.log('Hostels data:', hostels);
+  }, [student, hostels]);
+
   const filteredHostels = hostels.filter(
-    (hostel) =>
-      hostel.gender === student?.gender &&
-      hostel.isAvailableForAllocation // Only show available hostels
+    (hostel) => {
+      const genderMatch = hostel.gender === student?.gender;
+      const yearMatch = hostel.allowedYears ? hostel.allowedYears.includes(student?.year) : true;
+      const available = hostel.isAvailableForAllocation !== false; // Allow if undefined or true
+
+      console.log(`Hostel ${hostel.name}: gender=${genderMatch}, year=${yearMatch}, available=${available}`);
+
+      return genderMatch && yearMatch && available;
+    }
   );
 
-  return (
-    <div className="flex min-h-screen bg-blue-50">
-      <Sidebar />
-      <div className="flex-1 p-6 md:p-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Student Housing</h1>
-          <p className="text-gray-600">Select your preferred residence hall and manage accommodation preferences</p>
+  if (studentLoading || (!student && localStorage.getItem('rollNo'))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-academic-navy">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-electric-blue"></div>
+          <p className="text-electric-blue animate-pulse">Loading student profile...</p>
         </div>
+      </div>
+    );
+  }
 
-        {student && student.isAllocated ? (
-          <div className="bg-white p-6 rounded-xl shadow-md mb-8">
-            <div className="flex items-center mb-4">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="ml-3 text-xl font-bold text-gray-800">Housing Successfully Allocated</h2>
-            </div>
-            <div className="space-y-2 mb-6">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Student Name</p>
-                  <p className="font-semibold text-gray-800">{student.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Student ID</p>
-                  <p className="font-semibold text-gray-800">{student.rollNo}</p>
-                </div>
-              </div>
-              <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                <p className="text-green-800 font-medium">Your accommodation has been successfully processed and allocated.</p>
-              </div>
-            </div>
-            <Button
-              text="View Allocation Details"
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <main className="flex-1 p-8 overflow-y-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-text-main">Select Your Hostel</h1>
+          <p className="text-text-muted">Showing eligible hostels for Year {student?.year}</p>
+        </header>
+
+        {student?.preferredHostel ? (
+          <GlassCard className="max-w-xl mx-auto text-center py-12">
+            <CheckCircle size={64} className="mx-auto text-green-400 mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Registered Successfully</h2>
+            <p className="text-slate-400 mb-6">
+              You have registered for <strong>{student.preferredHostel.name}</strong>.
+              Allocation results will be published soon.
+            </p>
+            <button
               onClick={() => navigate('/dashboard')}
-              className="bg-blue-600 hover:bg-blue-700"
-            />
-          </div>
-        ) : student && student.preferredHostel ? (
-          <div className="bg-white p-6 rounded-xl shadow-md mb-8">
-            <div className="flex items-center mb-4">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="ml-3 text-xl font-bold text-gray-800">Registration Complete</h2>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <p className="text-sm text-gray-600">Student Name</p>
-                <p className="font-semibold text-gray-800">{student.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Student ID</p>
-                <p className="font-semibold text-gray-800">{student.rollNo}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Preferred Residence</p>
-                <p className="font-semibold text-gray-800">{student.preferredHostel.name}</p>
-              </div>
-            </div>
-            {student.pendingGroupRequest && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="text-blue-800 mb-3">You have indicated interest in roommate matching.</p>
-                <Button
-                  text="Manage Roommate Preferences"
-                  onClick={() => navigate(`/requests?hostelId=${student.preferredHostel._id}`)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                />
-              </div>
-            )}
-          </div>
+              className="px-6 py-2 bg-electric-blue text-slate-900 font-bold rounded-lg hover:bg-sky-400 transition"
+            >
+              Go to Dashboard
+            </button>
+          </GlassCard>
         ) : (
-          <div className="bg-white rounded-xl p-8 shadow-md">
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Select Residence Hall</h2>
-              <p className="text-gray-600">Choose your preferred accommodation from the available options below</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Loading available accommodations...</span>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <p>{error}</p>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filteredHostels.map((hostel) => (
-                  <div key={hostel._id} className="p-6 bg-white shadow-md rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-                    <div className="mb-4">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">{hostel.name}</h3>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex justify-between">
-                          <span>Total Rooms:</span>
-                          <span className="font-medium">{hostel.totalRooms}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Room Capacity:</span>
-                          <span className="font-medium">{hostel.roomCapacity} students</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Type:</span>
-                          <span className="font-medium capitalize">{hostel.gender} residence</span>
-                        </div>
-                      </div>
+              <p className="text-electric-blue">Loading hostels...</p>
+            ) : filteredHostels.length > 0 ? (
+              filteredHostels.map((hostel) => (
+                <GlassCard key={hostel._id} className="flex flex-col h-full bg-white/5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{hostel.name}</h3>
+                      <span className="text-xs px-2 py-0.5 rounded bg-nitt-gold/20 text-nitt-gold border border-nitt-gold/30">
+                        Year {hostel.allowedYears?.join(', ')}
+                      </span>
                     </div>
-                    <Button
-                      text={loadingSelect ? "Processing..." : "Select This Residence"}
-                      onClick={() => handleHostelSelect(hostel._id)}
-                      disabled={loadingSelect}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    />
+                    <Building2 className="text-electric-blue opacity-50" />
                   </div>
-                ))}
+
+                  <div className="space-y-2 mb-6 flex-1">
+                    <p className="text-sm text-slate-300 flex items-center gap-2">
+                      <Bed size={16} /> Capacity: {hostel.roomCapacity} Sharing
+                    </p>
+                    <p className="text-sm text-slate-300">
+                      Rooms: {hostel.totalRooms}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleHostelSelect(hostel)}
+                    disabled={loadingSelect}
+                    className="w-full py-3 bg-gradient-to-r from-electric-blue to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                  >
+                    {loadingSelect ? "Processing..." : "Select Hostel"}
+                  </button>
+                </GlassCard>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-slate-400 py-12">
+                No hostels available for your criteria.
               </div>
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
 
 export default HostelList;
-

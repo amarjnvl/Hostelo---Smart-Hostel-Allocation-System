@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { UserPlus, KeyRound, Users, X, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
-import Button from '../components/Button';
+import GlassCard from '../components/ui/GlassCard';
 
 const Request = () => {
     const [loading, setLoading] = useState(false);
@@ -19,32 +20,30 @@ const Request = () => {
     const location = useLocation();
     const hostelId = new URLSearchParams(location.search).get('hostelId');
 
+    const fetchGroupAndHostelDetails = async () => {
+        try {
+            setLoading(true);
+            if (!student?.groupId) return;
 
-    useEffect(() => {
-        const fetchGroupAndHostelDetails = async () => {
-            try {
-                setLoading(true);
-                if (!student?.groupId) return;
-
-                const groupResponse = await api.get(`/students/group/${student.groupId}`);
-                if (groupResponse.data.success) {
-                    setRoommateGroup(groupResponse.data.data);
-
-                    const hostelId = groupResponse.data.data[0]?.groupHostelChoice;
-                    if (hostelId && typeof hostelId === 'string') {
-                        const hostelResponse = await api.get(`/hostels/${hostelId}`);
-                        if (hostelResponse.data.success) {
-                            setHostelName(hostelResponse.data.data.name);
-                        }
+            const groupResponse = await api.get(`/students/group/${student.groupId}`);
+            if (groupResponse.data.success) {
+                setRoommateGroup(groupResponse.data.data);
+                const hId = groupResponse.data.data[0]?.groupHostelChoice;
+                if (hId && typeof hId === 'string') {
+                    const hostelResponse = await api.get(`/hostels/${hId}`);
+                    if (hostelResponse.data.success) {
+                        setHostelName(hostelResponse.data.data.name);
                     }
                 }
-            } catch (err) {
-                setError(err.response?.data?.message || 'Failed to fetch details');
-            } finally {
-                setLoading(false);
             }
-        };
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to fetch details');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchGroupAndHostelDetails();
     }, [student?.groupId]);
 
@@ -52,14 +51,11 @@ const Request = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.post('/roommates/send-otp', {
-                toRoll: friendRollNo,
-                hostelId
-            });
+            await api.post('/roommates/send-otp', { toRoll: friendRollNo, hostelId });
             setOtpSent(true);
-            setStatusMsg('OTP sent successfully! Ask your friend for the code.');
+            setStatusMsg('OTP sent! Ask your friend for the code.');
         } catch (err) {
-            console.log(err.response?.data?.message || 'Failed to send OTP');
+            setError(err.response?.data?.message || 'Failed to send OTP');
         } finally {
             setLoading(false);
         }
@@ -69,151 +65,137 @@ const Request = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.post('/roommates/verify-otp', {
-                toRoll: friendRollNo,
-                otp,
-                hostelId
-            });
-            // setStatusMsg('Roommate verified successfully!');
+            await api.post('/roommates/verify-otp', { toRoll: friendRollNo, otp, hostelId });
             setFriendRollNo('');
             setOtp('');
             setOtpSent(false);
+            setStatusMsg('Roommate added successfully!');
             fetchGroupAndHostelDetails();
         } catch (err) {
-            console.log(err.response?.data?.message || 'Failed to send OTP');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRemoveFromGroup = async (rollNo) => {
-        try {
-            setLoading(true);
-            const response = await api.post('/students/remove-from-group', { rollNo });
-            if (response.data.success) {
-                fetchGroupAndHostelDetails();
-                setStatusMsg('Member removed successfully');
-            }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to remove member');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLeaveGroup = async () => {
-        try {
-            setLoading(true);
-            const response = await api.post('/students/leave-group');
-            if (response.data.success) {
-                setRoommateGroup([]);
-                setHostelName('');
-                setStatusMsg('Successfully left the group');
-            }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to leave group');
+            setError(err.response?.data?.message || 'Verification failed');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex min-h-screen bg-blue-50">
+        <div className="flex min-h-screen">
             <Sidebar />
-            <div className="flex-1 p-6 md:p-10">
-                <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-800 mb-2">Roommate Management</h1>
-                        <p className="text-gray-600">Add roommates to your housing group and manage preferences</p>
-                    </div>
+            <main className="flex-1 p-8 overflow-y-auto">
+                <header className="mb-8">
+                    <h1 className="text-3xl font-bold text-text-main">Roommate Requests</h1>
+                    <p className="text-text-muted">Invite friends to your group</p>
+                </header>
 
-                    {hostelId && (
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Roommate</h2>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Roommate's Student ID
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={friendRollNo}
-                                        onChange={(e) => setFriendRollNo(e.target.value)}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter your roommate's student ID"
-                                        disabled={otpSent}
-                                    />
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Your roommate will receive a verification code via email
-                                    </p>
-                                </div>
-
-                                {!otpSent ? (
-                                    <Button
-                                        text="Send Verification Code"
-                                        onClick={sendOtp}
-                                        loading={loading}
-                                        disabled={!friendRollNo || loading}
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                    />
-                                ) : (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Verification Code
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={otp}
-                                                onChange={(e) => setOtp(e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="Enter the 6-digit verification code"
-                                            />
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                Ask your roommate for the code they received via email
-                                            </p>
-                                        </div>
-                                        <Button
-                                            text="Verify & Add Roommate"
-                                            onClick={verifyOtp}
-                                            loading={loading}
-                                            disabled={!otp || loading}
-                                            className="bg-green-600 hover:bg-green-700"
+                <div className="max-w-2xl mx-auto space-y-6">
+                    {/* Add Roommate Section */}
+                    {hostelId ? (
+                        student?.groupId && !student?.isLeader ? (
+                            <GlassCard className="text-center py-8 border-electric-blue/30 bg-electric-blue/5">
+                                <Users size={32} className="mx-auto text-electric-blue mb-3" />
+                                <h2 className="text-xl font-semibold text-white mb-2">Member View</h2>
+                                <p className="text-slate-300">
+                                    You are a member of this group. Only the <span className="text-electric-blue font-bold">Group Leader</span> can add new roommates.
+                                </p>
+                            </GlassCard>
+                        ) : (
+                            <GlassCard>
+                                <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                                    <UserPlus className="text-electric-blue" /> Add Roommate
+                                </h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Friend's Roll Number</label>
+                                        <input
+                                            type="text"
+                                            value={friendRollNo}
+                                            onChange={(e) => setFriendRollNo(e.target.value)}
+                                            className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-electric-blue/50 focus:bg-white/10 transition-all font-mono"
+                                            placeholder="Enter roll number"
+                                            disabled={otpSent}
                                         />
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                                    </div>
 
-
-
-                    {(error || statusMsg) && (
-                        <div className={`p-4 rounded-lg ${
-                            error 
-                                ? 'bg-red-50 border border-red-200 text-red-700' 
-                                : 'bg-green-50 border border-green-200 text-green-700'
-                        }`}>
-                            <div className="flex">
-                                <div className="flex-shrink-0">
-                                    {error ? (
-                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
+                                    {!otpSent ? (
+                                        <button
+                                            onClick={sendOtp}
+                                            disabled={!friendRollNo || loading}
+                                            className="w-full py-3 bg-electric-blue hover:bg-sky-400 text-slate-900 font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {loading ? <Loader2 className="animate-spin" /> : 'Send OTP'}
+                                        </button>
                                     ) : (
-                                        <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
+                                        <>
+                                            <div>
+                                                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Enter OTP</label>
+                                                <input
+                                                    type="text"
+                                                    value={otp}
+                                                    onChange={(e) => setOtp(e.target.value)}
+                                                    className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-electric-blue/50 focus:bg-white/10 transition-all font-mono tracking-widest text-lg"
+                                                    placeholder="• • • • • •"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={verifyOtp}
+                                                disabled={!otp || loading}
+                                                className="w-full py-3 bg-nitt-gold hover:bg-yellow-400 text-slate-900 font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {loading ? <Loader2 className="animate-spin" /> : 'Verify & Add'}
+                                            </button>
+                                        </>
                                     )}
                                 </div>
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium">{error || statusMsg}</p>
-                                </div>
+                            </GlassCard>
+                        )
+                    ) : (
+                        <GlassCard className="text-center py-12">
+                            <Users size={48} className="mx-auto text-text-muted mb-4" />
+                            <h2 className="text-xl font-semibold text-text-main mb-2">No Active Hostel Registration</h2>
+                            <p className="text-text-muted mb-6">You need to select a hostel first to invite roommates.</p>
+                            <button
+                                onClick={() => navigate('/hostels')}
+                                className="px-6 py-2 bg-electric-blue hover:bg-sky-400 text-slate-900 font-bold rounded-xl transition-all"
+                            >
+                                Select Hostel
+                            </button>
+                        </GlassCard>
+                    )}
+
+                    {/* Current Group */}
+                    {roommateGroup.length > 0 && (
+                        <GlassCard>
+                            <h2 className="text-xl font-semibold text-text-main mb-4 flex items-center gap-2">
+                                <Users className="text-nitt-gold" /> Your Group
+                            </h2>
+                            {hostelName && <p className="text-electric-blue mb-4">Hostel: {hostelName}</p>}
+                            <div className="space-y-2">
+                                {roommateGroup.map((member) => (
+                                    <div key={member._id} className="flex items-center justify-between p-3 bg-glass-bg rounded-lg border border-glass-border">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-white">
+                                                {member.name[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-sm text-text-main">{member.name}</p>
+                                                <p className="text-xs text-text-muted">{member.rollNo}</p>
+                                            </div>
+                                        </div>
+                                        {member.isLeader && <span className="text-[10px] bg-electric-blue/20 text-electric-blue px-2 py-1 rounded">Leader</span>}
+                                    </div>
+                                ))}
                             </div>
+                        </GlassCard>
+                    )}
+
+                    {/* Messages */}
+                    {(error || statusMsg) && (
+                        <div className={`p-4 rounded-xl text-sm text-center ${error ? 'bg-red-500/10 border border-red-500/30 text-red-300' : 'bg-green-500/10 border border-green-500/30 text-green-300'}`}>
+                            {error || statusMsg}
                         </div>
                     )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

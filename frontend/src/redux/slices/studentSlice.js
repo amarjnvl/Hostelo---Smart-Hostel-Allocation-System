@@ -65,7 +65,8 @@ const studentSlice = createSlice({
       })
       .addCase(verifyOtp.fulfilled, (state, action) => {
         state.loading = false;
-        state.pendingGroupRequest = action.payload;
+        state.student = action.payload.student;
+        state.token = action.payload.token;
       })
       .addCase(verifyOtp.rejected, (state, action) => {
         state.loading = false;
