@@ -82,4 +82,4 @@ Hostelo is a comprehensive web application designed to streamline the hostel all
 5. Open a Pull Request.
 
 ---
-&copy; 2025 Hostelo Inc. | Built with ❤️ for NIT Trichy
+&copy; 2025 Hostelo Inc. | Built with ❤️ 
